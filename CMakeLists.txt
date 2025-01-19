@@ -48,11 +48,29 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
+    ./Core/bsp/drivers/bsp.c
+    ./Core/bsp/drivers/bsp_manual.c
+    ./Core/bsp/drivers/uart.c
+    ./Core/bsp/drivers/uart_mpu_specific.c
+    ./Core/bsp/drivers/bsp_backup_ram.c
+    ./Core/Src/blinky.c
+    ./Core/Services/app_cli/app_cli_commands.c
+    ./Core/Services/app_cli/app_cli_manual_commands.c
+    ./Core/Services/app_cli/app_cli.c
+    ./Core/services/fault_manager.c
+    ./Core/services/reset.c
+    ./Core/services/reset_reason_print.c
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
+    ./library/embedded-cli
+    ./Core/services
+    ./Core/services/app_cli
+    ./Core/bsp
+    ./Core/bsp/interfaces
+    ./Core/bsp/drivers
 )
 
 # Add project symbols (macros)
