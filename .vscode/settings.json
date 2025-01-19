@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "stdbool.h": "c",
+        "cmath": "c",
+        "stdio.h": "c",
+        "string.h": "c",
+        "posted_signals.h": "c",
+        "bsp.h": "c",
+        "uart.h": "c"
+    }
+}
