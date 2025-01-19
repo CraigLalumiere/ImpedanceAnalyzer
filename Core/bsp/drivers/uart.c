@@ -173,10 +173,6 @@ void USART_IRQHandler(UART_ID_T id)
     }
 
     UART_HandleTypeDef *p_stm_huart = STM32_UART_GetHandle(p_uart->_config.uart_id);
-    if (p_stm_huart == NULL)
-    {
-        uint8_t i = 0;
-    }
     Q_ASSERT(p_stm_huart != NULL);
 
     uint32_t isr_reg = p_stm_huart->Instance->ISR;
@@ -270,7 +266,7 @@ void USART_IRQHandler(UART_ID_T id)
         }
 
         // UART frame error interrupt occurred
-        if ((isr_reg & USART_ISR_FE) && (cr3_reg & USART_CR3_EIE))
+        if ((isr_reg & USART_ISR_FE)) // && (cr3_reg & USART_CR3_EIE))
         {
             __HAL_UART_CLEAR_FLAG(p_stm_huart, UART_CLEAR_FEF);
             // SEGGER_RTT_WriteString(0, "UART 2 - Frame Error\r\n");
