@@ -2,14 +2,12 @@ import struct
 from crc import calculate_crc
 from messages.LogPrint_pb2 import LogPrint
 from messages.CLIData_pb2 import CLIData
-from messages.MotorDataLog_pb2 import MotorDataLog
-from messages.Box1SensorDataLog_pb2 import Box1SensorDataLog
+from messages.AddToPlot_pb2 import AddToPlot
 from messages.MessageType_pb2 import MessageType
 
 message_from_id = {MessageType.LOG_PRINT: LogPrint,
                    MessageType.CLI_DATA: CLIData,
-                   MessageType.MOTOR_DATA_LOG: MotorDataLog,
-                   MessageType.BOX1_SENSOR_DATA_LOG: Box1SensorDataLog
+                   MessageType.ADD_TO_PLOT: AddToPlot
                    }
 
 

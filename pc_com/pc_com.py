@@ -5,8 +5,7 @@ from PySide6.QtWidgets import QFileDialog, QInputDialog
 from plot_manager import PlotManager
 from PySide6 import QtCore
 from messages.CLIData_pb2 import CLIData
-from messages.MotorDataLog_pb2 import MotorDataLog
-from messages.Box1SensorDataLog_pb2 import Box1SensorDataLog
+from messages.AddToPlot_pb2 import AddToPlot
 from messages.LogPrint_pb2 import LogPrint
 
 import packets
@@ -31,7 +30,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.txt_data_dir.setText(self.data_folder)
 
         # set app title
-        self.setWindowTitle("Portage Com Tool")
+        self.setWindowTitle("NUCLEO-G474 Com Tool")
 
         self.update_interface_state()
 
@@ -87,7 +86,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.outfile.write(msg_string + '\n')
 
         # for plots
-        if isinstance(message, MotorDataLog) or isinstance(message, Box1SensorDataLog):
+        if isinstance(message, AddToPlot):
             self.plot_manager.update_data(message)
 
         # todo record data used in plots
@@ -102,6 +101,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
                 if self.outfile_errors is not None:
                     self.outfile_errors.close()
+        elif evt['event'] == 'connection_status_changed':
+            self.plot_manager.reset_plots()
 
             self.update_interface_state()      
 
