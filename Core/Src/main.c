@@ -168,6 +168,9 @@ static void MX_TIM1_Init(void);
 inline void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
 }
+inline void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc)
+{
+}
 
 inline void HAL_DAC_ConvCpltCallbackCh1(DAC_HandleTypeDef *hdac)
 {

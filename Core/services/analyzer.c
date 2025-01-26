@@ -67,8 +67,8 @@ typedef struct
     int16_t cosine_buffer[ADC_DMA_BUFFER_MAX_SIZE];
     uint16_t adc_dma_buffer[ADC_DMA_BUFFER_MAX_SIZE];
 
-    uint16_t adc_dma_data_len;
     uint16_t dac_dma_data_len;
+    uint16_t adc_dma_data_len;
 } Analyzer;
 
 typedef struct
@@ -160,7 +160,7 @@ QState initial(Analyzer *const me, void const *const par)
 {
     Q_UNUSED_PAR(par);
 
-    QTimeEvt_armX(&me->timeEvt, BSP_TICKS_PER_SEC / 10U, BSP_TICKS_PER_SEC / 10U);
+    QTimeEvt_armX(&me->timeEvt, BSP_TICKS_PER_SEC / 1U, BSP_TICKS_PER_SEC / 1U);
 
     return Q_TRAN(&top);
 }
@@ -257,14 +257,14 @@ QState begin_sinusoid(Analyzer *const me, QEvt const *const e)
     switch (e->sig)
     {
         case Q_ENTRY_SIG: {
+            memset(me->adc_dma_buffer, 100, ADC_DMA_BUFFER_MAX_SIZE);
+
             BSP_Stop_ADC_DAC_DMA();
             GenerateSinusoid(me->freq_list[me->freq_index]);
             uint16_t dac_total_clock_periods = max(
                 2 * me->adc_dma_data_len * ADC_DOWNSAMPLING_RATE,
                 NUM_PERIODS * me->dac_dma_data_len);
             dac_total_clock_periods++;
-
-            // uint32_t per = PeriodToFrequency(30);
 
             BSP_Setup_ADC_DAC_DMA(
                 me->adc_dma_buffer,
@@ -274,7 +274,7 @@ QState begin_sinusoid(Analyzer *const me, QEvt const *const e)
                 dac_total_clock_periods);
             BSP_Start_Waveform_Timer();
 
-            log_data(1, "label", 100 * sin(BSP_Get_Milliseconds_Tick()));
+            // log_data(1, "label", 100 * sin(BSP_Get_Milliseconds_Tick()));
 
             status = Q_HANDLED();
             break;

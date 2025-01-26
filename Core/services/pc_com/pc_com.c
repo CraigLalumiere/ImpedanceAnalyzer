@@ -363,9 +363,13 @@ static QState active(PC_COM *const me, QEvt const *const e)
             safe_strncpy(message.data_label, event->data_label, sizeof(message.data_label));
             message.plot_number = event->plot_number;
             Q_ASSERT(event->data_len * sizeof(event->data_points[0]) < sizeof(message.data_points));
-            memcpy(message.data_points, event->data_points, event->data_len);
+            memcpy(
+                message.data_points,
+                event->data_points,
+                event->data_len * sizeof(event->data_points[0]));
+            message.data_points_count = event->data_len;
 
-            bool ok = pb_encode(&stream, AddToPlot_fields, &message);
+            bool ok = pb_encode(&stream, DrawPlot_fields, &message);
             Q_ASSERT(ok);
 
             // calculate CRC and transmit
