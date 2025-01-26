@@ -72,6 +72,7 @@ set(messages_SRCS
     ${MESSAGES_GENERATED_PATH}/c/LogPrint.pb.c
     ${MESSAGES_GENERATED_PATH}/c/CLIData.pb.c
     ${MESSAGES_GENERATED_PATH}/c/AddToPlot.pb.c
+    ${MESSAGES_GENERATED_PATH}/c/DrawPlot.pb.c
 )
 
 set(sources_SRCS 

@@ -14,7 +14,8 @@
         "pc_com.h": "c",
         "hdlc.h": "c",
         "string.h": "c",
-        "clidata.pb.h": "c"
+        "clidata.pb.h": "c",
+        "messagetype.pb.h": "c"
     },
     "editor.rulers": [
         100

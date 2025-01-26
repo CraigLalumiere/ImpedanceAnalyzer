@@ -77,6 +77,7 @@ typedef struct
         FaultGeneratedEvent_T fault_event;
         PCCOMPrintEvent_T pc_com_print_evt;
         PCCOMCliDataEvent_T pc_com_cli_event;
+        DrawPlotEvent_T plot_data_event;
     } large_messages;
 } LongMessageUnion_T;
 
@@ -127,7 +128,6 @@ uint16_t adc_dma_buffer[ADC_DMA_BUFFER_MAX_SIZE];
 uint16_t dma_data_len = 100;
 
 bool ADC_sampling_complete   = false;
-bool printADCData            = false;
 bool calibrationRequested    = false;
 bool calibrating             = false;
 bool calibrated              = false;
@@ -165,96 +165,12 @@ static void MX_TIM1_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-static uint32_t PeriodToFrequency(uint32_t period)
-{
-    return 15272727ul / period / ADC_DOWNSAMPLING_RATE;
-}
-
-static void ADC_FourierAnalysis()
-{
-    int32_t mean = 0;
-    for (int i = 0; i < dma_data_len; i++)
-    {
-        mean += adc_dma_buffer[i];
-    }
-    mean /= dma_data_len;
-    int32_t inPhase      = 0;
-    int32_t quadrature   = 0;
-    uint32_t mean_square = 0; // the square of RMS
-    for (int i = 0; i < dma_data_len; i++)
-    {
-        inPhase += adc_dma_buffer[i] * sine_buffer[i];
-        quadrature += adc_dma_buffer[i] * cosine_buffer[i];
-        mean_square += (adc_dma_buffer[i] - mean) * (adc_dma_buffer[i] - mean);
-    }
-    inPhase /= SINUSOID_AMP * dma_data_len / 2;
-    quadrature /= SINUSOID_AMP * dma_data_len / 2;
-    mean_square /= dma_data_len / 2;
-    uint16_t amplitude   = sqrt(inPhase * inPhase + quadrature * quadrature);
-    double angle         = atan2(quadrature, inPhase) * 180 / pi;
-    double THD           = sqrt(mean_square - amplitude * amplitude) / amplitude;
-    uint16_t THD_percent = (uint16_t) (THD * 100);
-
-    if (calibrating)
-    {
-        amp_cal_list[curr_freq_index]   = 1024.0 / amplitude;
-        phase_cal_list[curr_freq_index] = -angle;
-    }
-    else if (calibrated)
-    {
-        amplitude *= amp_cal_list[curr_freq_index];
-        angle += phase_cal_list[curr_freq_index];
-    }
-
-    static char printBuffer[128];
-    memset(printBuffer, 0, sizeof(printBuffer));
-
-    char *str_cur       = printBuffer;
-    const char *str_end = printBuffer + sizeof(printBuffer);
-    // string concatenation
-    str_cur += snprintf(
-        str_cur,
-        str_end - str_cur,
-        "%ld\t%ld\t%ld\t%d\t",
-        PeriodToFrequency(waveform_period),
-        inPhase,
-        quadrature,
-        amplitude);
-    if (angle >= 0)
-        str_cur += snprintf(
-            str_cur,
-            str_end - str_cur,
-            " %d.%.2d\t",
-            (int16_t) (angle),
-            (int16_t) (angle * 100) % 100);
-    else
-        str_cur += snprintf(
-            str_cur,
-            str_end - str_cur,
-            "-%d.%.2d\t",
-            (int16_t) (-angle),
-            (int16_t) (-angle * 100) % 100);
-    str_cur += snprintf(str_cur, str_end - str_cur, "%d%%\n\r", THD_percent);
-    HAL_UART_Transmit(&hlpuart1, (uint8_t *) printBuffer, sizeof(printBuffer), 0xffff);
-
-    fourierAnalysisComplete = true;
-}
-
 inline void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
 }
 
 inline void HAL_DAC_ConvCpltCallbackCh1(DAC_HandleTypeDef *hdac)
 {
-    if (printADCData)
-    {
-        printADCData = false;
-        printf("Data length = %d\n\r", waveform_period);
-        for (int i = 0; i < dma_data_len; i++)
-        {
-            printf("%d\n\r", adc_dma_buffer[i]);
-        }
-    }
 }
 
 inline void HAL_DAC_ConvHalfCpltCallbackCh1(DAC_HandleTypeDef *hdac)
@@ -277,18 +193,6 @@ inline void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
         static QEvt const event = QEVT_INITIALIZER(POSTED_WAVEFORM_CAPTURE_COMPLETE_SIG);
         QACTIVE_POST(AO_Analyzer, &event, NULL);
     }
-}
-
-void DMA_XFER_CPLT(DMA_HandleTypeDef *hdma)
-{
-    // Disable the DMA (not clear if this is necessary)
-    HAL_DMA_Abort_IT(&hdma_tim1_up);
-    // Stop the timer
-    // HAL_TIM_OC_Stop(&htim1, TIM_CHANNEL_1);
-    // This appears necessary to deassert the trigger and prevent DMA triggering immediately when
-    // enabled
-    TIM1->DIER &= ~(1 << 9);
-    TIM1->DIER |= (1 << 9);
 }
 
 /* USER CODE END 0 */

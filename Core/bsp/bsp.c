@@ -214,7 +214,7 @@ void BSP_Setup_ADC_DAC_DMA(
     // setup CCR for TIM1 to generate exactly 10x periods
     // this is the number of DAC pulses to be generated, so it must be a multiple of 3 to keep the
     // ADC happy
-    TIM1->CCR2 = dac_total_clock_periods + 1; // number of pulses is 1 less than this number
+    TIM1->CCR2 = dac_total_clock_periods; // number of pulses is equal to this number
 }
 
 void BSP_Start_Waveform_Timer()

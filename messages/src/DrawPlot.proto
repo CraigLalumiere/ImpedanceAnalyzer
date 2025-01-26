@@ -1,0 +1,8 @@
+syntax = "proto2";
+
+// A log print message
+message DrawPlot {
+  required uint32 plot_number = 1;
+  required string data_label = 2;
+  repeated float data_points = 3 [packed=true];
+}

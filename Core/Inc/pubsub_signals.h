@@ -14,6 +14,7 @@ enum PubSubSignals
     PUBSUB_MOTOR_DATA_SIG,
     PUBSUB_TACH_SIG,
     PUBSUB_ADD_DATA_TO_PLOT_SIG,
+    PUBSUB_DRAW_PLOT_SIG,
     PUBSUB_MAX_SIG
 };
 
@@ -47,5 +48,14 @@ typedef struct
     char data_label[16];
     int32_t data_point;
 } AddDataToPlotEvent_T;
+
+typedef struct
+{
+    QEvt super;
+    uint8_t plot_number;
+    char data_label[16];
+    float32_t *data_points;
+    uint16_t data_len;
+} DrawPlotEvent_T;
 
 #endif // PUBSUB_SIGNALS_H_

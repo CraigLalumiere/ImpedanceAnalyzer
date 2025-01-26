@@ -9,4 +9,7 @@ enum MessageType {
 
     // Add datapoint to some plot
     ADD_TO_PLOT = 3;
+
+    // Send a bunch of data to draw an entire plot
+    DRAW_PLOT = 4;
 }

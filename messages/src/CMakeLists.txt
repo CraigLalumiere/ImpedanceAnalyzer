@@ -6,6 +6,7 @@ set(PROTO_FILES
         LogPrint.proto
         CLIData.proto
         AddToPlot.proto
+        DrawPlot.proto
 )
 
 

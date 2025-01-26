@@ -2,6 +2,7 @@
 #include "bsp.h"
 #include "c/AddToPlot.pb.h"
 #include "c/CLIData.pb.h"
+#include "c/DrawPlot.pb.h"
 #include "c/LogPrint.pb.h"
 #include "c/MessageType.pb.h"
 #include "cli_commands.h"
@@ -46,6 +47,7 @@ typedef union
     uint8_t LogPrint_max[LOGPRINT_PB_H_MAX_SIZE];
     uint8_t CLIData_max[CLIDATA_PB_H_MAX_SIZE];
     uint8_t AddToPlot_max[ADDTOPLOT_PB_H_MAX_SIZE];
+    uint8_t DrawPlot_max[DrawPlot_size];
 } TX_Message_Buffer_T;
 
 typedef union
@@ -197,6 +199,7 @@ static QState initial(PC_COM *const me, void const *const par)
 
     // subscribe
     QActive_subscribe((QActive *) me, PUBSUB_ADD_DATA_TO_PLOT_SIG);
+    QActive_subscribe((QActive *) me, PUBSUB_DRAW_PLOT_SIG);
 
     // Process CLI  every 25ms
     QTimeEvt_armX(
@@ -318,7 +321,7 @@ static QState active(PC_COM *const me, QEvt const *const e)
 
         case PUBSUB_ADD_DATA_TO_PLOT_SIG: {
             // set message type
-            me->tx_packet.type = MessageType_AddToPlot;
+            me->tx_packet.type = MessageType_ADD_TO_PLOT;
 
             // create pb message
             AddToPlot message = AddToPlot_init_zero;
@@ -332,7 +335,35 @@ static QState active(PC_COM *const me, QEvt const *const e)
                 message.data_label,
                 Q_EVT_CAST(AddDataToPlotEvent_T)->data_label,
                 sizeof(message.data_label));
-            message.data_point = Q_EVT_CAST(AddDataToPlotEvent_T)->data_point;
+            message.plot_number = Q_EVT_CAST(AddDataToPlotEvent_T)->plot_number;
+            message.data_point  = Q_EVT_CAST(AddDataToPlotEvent_T)->data_point;
+
+            bool ok = pb_encode(&stream, AddToPlot_fields, &message);
+            Q_ASSERT(ok);
+
+            // calculate CRC and transmit
+            calculate_crc_and_send_packet(me, stream.bytes_written);
+            status = Q_HANDLED();
+            break;
+        }
+
+        case PUBSUB_DRAW_PLOT_SIG: {
+            // set message type
+            me->tx_packet.type = MessageType_DRAW_PLOT;
+
+            // create pb message
+            DrawPlot message = DrawPlot_init_zero;
+
+            // populate message and encode it
+            pb_ostream_t stream = pb_ostream_from_buffer(
+                ((uint8_t *) &me->tx_packet.message), sizeof(TX_Message_Buffer_T));
+
+            const DrawPlotEvent_T *event = Q_EVT_CAST(DrawPlotEvent_T);
+
+            safe_strncpy(message.data_label, event->data_label, sizeof(message.data_label));
+            message.plot_number = event->plot_number;
+            Q_ASSERT(event->data_len * sizeof(event->data_points[0]) < sizeof(message.data_points));
+            memcpy(message.data_points, event->data_points, event->data_len);
 
             bool ok = pb_encode(&stream, AddToPlot_fields, &message);
             Q_ASSERT(ok);
