@@ -3,11 +3,13 @@ from crc import calculate_crc
 from messages.LogPrint_pb2 import LogPrint
 from messages.CLIData_pb2 import CLIData
 from messages.AddToPlot_pb2 import AddToPlot
+from messages.DrawPlot_pb2 import DrawPlot
 from messages.MessageType_pb2 import MessageType
 
 message_from_id = {MessageType.LOG_PRINT: LogPrint,
                    MessageType.CLI_DATA: CLIData,
-                   MessageType.ADD_TO_PLOT: AddToPlot
+                   MessageType.ADD_TO_PLOT: AddToPlot,
+                   MessageType.DRAW_PLOT: DrawPlot
                    }
 
 
@@ -34,6 +36,8 @@ def get_message_from_packet(packet):
             message.ParseFromString(packet[3:])
         except KeyError:
             return None
+    else:
+        print('CRC fail!')
 
     return message
 

@@ -7,6 +7,7 @@ from PySide6 import QtCore
 from messages.CLIData_pb2 import CLIData
 from messages.AddToPlot_pb2 import AddToPlot
 from messages.LogPrint_pb2 import LogPrint
+from messages.DrawPlot_pb2 import DrawPlot
 
 import packets
 from main_window import Ui_MainWindow
@@ -68,6 +69,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         msgs = self.controller.get_received_messages()
         for msg in msgs:
+            # print(type(msg))
             self.handle_controller_msg_received(msg)
 
         # redraw plots
@@ -86,7 +88,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.outfile.write(msg_string + '\n')
 
         # for plots
-        if isinstance(message, AddToPlot):
+        if isinstance(message, AddToPlot) or isinstance(message, DrawPlot):
             self.plot_manager.update_data(message)
 
         # todo record data used in plots

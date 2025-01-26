@@ -2,6 +2,7 @@ from PySide6 import QtWidgets, QtCore, QtGui
 import pyqtgraph as pg
 import numpy as np
 from messages.AddToPlot_pb2 import AddToPlot
+from messages.DrawPlot_pb2 import DrawPlot
 
 
 
@@ -16,7 +17,7 @@ class PlotManager:
 
 
     def update_data(self, msg):
-        if isinstance(msg, AddToPlot):
+        if isinstance(msg, AddToPlot) or isinstance(msg, DrawPlot):
             plot_number = msg.plot_number
 
             # check if this plot exists
@@ -34,14 +35,20 @@ class PlotManager:
                                                         name=data_label)
                 self.plot_data[plot_number][data_label] = {'x':[], 'y':[], 'curve':thisCurve} # empty
 
-            if len(self.plot_data[plot_number][data_label]['x']) < 50:
-                self.plot_data[plot_number][data_label]['x'].append(msg.milliseconds_tick)
-                self.plot_data[plot_number][data_label]['y'].append(msg.data_point)
-            else:
-                self.plot_data[plot_number][data_label]['x'][:-1] = self.plot_data[plot_number][data_label]['x'][1:]
-                self.plot_data[plot_number][data_label]['x'][-1] = msg.milliseconds_tick
-                self.plot_data[plot_number][data_label]['y'][:-1] = self.plot_data[plot_number][data_label]['y'][1:]
-                self.plot_data[plot_number][data_label]['y'][-1] = msg.data_point
+            if isinstance(msg, AddToPlot):
+                if len(self.plot_data[plot_number][data_label]['x']) < 50:
+                    self.plot_data[plot_number][data_label]['x'].append(msg.milliseconds_tick)
+                    self.plot_data[plot_number][data_label]['y'].append(msg.data_point)
+                else:
+                    self.plot_data[plot_number][data_label]['x'][:-1] = self.plot_data[plot_number][data_label]['x'][1:]
+                    self.plot_data[plot_number][data_label]['x'][-1] = msg.milliseconds_tick
+                    self.plot_data[plot_number][data_label]['y'][:-1] = self.plot_data[plot_number][data_label]['y'][1:]
+                    self.plot_data[plot_number][data_label]['y'][-1] = msg.data_point
+            
+            if isinstance(msg, DrawPlot):
+                num_points = len(msg.data_points)
+                self.plot_data[plot_number][data_label]['x'] = np.linspace(0, num_points - 1, num_points)
+                self.plot_data[plot_number][data_label]['y'] = msg.data_points._values
 
 
     def update_plot(self):

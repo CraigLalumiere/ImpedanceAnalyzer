@@ -80,6 +80,7 @@ class ComController:
         Returns list of received messages
         """
         received_packets = list(get_all_from_queue(self.data_q))
+
         received_massages = [packets.get_message_from_packet(p) for p in received_packets]
         return received_massages
     
