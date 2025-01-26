@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+enum MessageType {
+    // Log Print
+    LOG_PRINT = 1;
+
+    // CLI Data
+    CLI_DATA = 2;    
+
+    // Add datapoint to some plot
+    AddToPlot = 3;
+}

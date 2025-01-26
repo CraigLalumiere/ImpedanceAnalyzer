@@ -1,54 +1,81 @@
-//============================================================================
-// Product: Board Support Package example
-// Last Updated for Version: 7.3.0
-// Date of the Last Update:  2023-08-12
-//
-//                   Q u a n t u m  L e a P s
-//                   ------------------------
-//                   Modern Embedded Software
-//
-// Copyright (C) 2005 Quantum Leaps, LLC. All rights reserved.
-//
-// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-QL-commercial
-//
-// This software is dual-licensed under the terms of the open source GNU
-// General Public License version 3 (or any later version), or alternatively,
-// under the terms of one of the closed source Quantum Leaps commercial
-// licenses.
-//
-// The terms of the open source GNU General Public License version 3
-// can be found at: <www.gnu.org/licenses/gpl-3.0>
-//
-// The terms of the closed source Quantum Leaps commercial licenses
-// can be found at: <www.state-machine.com/licensing>
-//
-// Redistributions in source code must retain this top-level comment block.
-// Plagiarizing this software to sidestep the license obligations is illegal.
-//
-// Contact information:
-// <www.state-machine.com/licensing>
-// <info@state-machine.com>
-//============================================================================
 #ifndef BSP_H_
 #define BSP_H_
 
-#include "serial_interface.h"
+#include "interfaces/serial_interface.h"
 #include "stdint.h"
 #include <stdbool.h>
 
-#define BSP_TICKS_PER_SEC 100U
+/**************************************************************************************************\
+* Public macros
+\**************************************************************************************************/
+
+#define BSP_TICKS_PER_SEC         1000U
+#define MILLISECONDS_TO_TICKS(ms) ((ms) * ((BSP_TICKS_PER_SEC) / 1000))
+
+/**************************************************************************************************\
+* Public type definitions
+\**************************************************************************************************/
+
+typedef enum
+{
+    IMPEDANCE_100,
+    IMPEDANCE_330,
+    IMPEDANCE_1k,
+    IMPEDANCE_3k3,
+    IMPEDANCE_10k,
+    IMPEDANCE_33k,
+    IMPEDANCE_100k,
+    IMPEDANCE_330k
+} Source_Impedance_T;
+
+/**************************************************************************************************\
+* Public memory declarations
+\**************************************************************************************************/
 
 void BSP_Init(void);
 void BSP_displayPaused(uint8_t paused);
 void BSP_displayPhilStat(uint8_t n, char const *stat);
 void BSP_terminate(int16_t result);
 
+/**************************************************************************************************\
+* Public prototypes
+\**************************************************************************************************/
+
+/**
+ ***************************************************************************************************
+ * @brief   Millisecond Tick
+ **************************************************************************************************/
+uint32_t BSP_Get_Milliseconds_Tick(void);
+
 /**
  ***************************************************************************************************
  * @brief   Functions for blinky LED
  **************************************************************************************************/
-void BSP_ledOn(void);
-void BSP_ledOff(void);
+void BSP_LED_On(void);
+void BSP_LED_Off(void);
+void BSP_debug_gpio_on(void);
+void BSP_debug_gpio_off(void);
+void BSP_debug_gpio_toggle(void);
+
+/**
+ ***************************************************************************************************
+ * @brief   Functions for waveform generation/capture
+ **************************************************************************************************/
+
+void BSP_Stop_ADC_DAC_DMA();
+void BSP_Setup_ADC_DAC_DMA(
+    uint16_t adc_dma_buffer[],
+    uint16_t adc_data_width,
+    uint16_t dac_dma_buffer[],
+    uint16_t dac_data_width,
+    uint16_t dac_total_clock_periods);
+void BSP_Start_Waveform_Timer();
+
+/**
+ ***************************************************************************************************
+ * @brief   Functions for source impedance of waveform generator
+ **************************************************************************************************/
+void BSP_Set_Source_Impedance(Source_Impedance_T impedance);
 
 /**
  ***************************************************************************************************

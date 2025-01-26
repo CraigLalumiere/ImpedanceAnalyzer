@@ -1,0 +1,9 @@
+syntax = "proto2";
+
+// A log print message
+message AddToPlot {
+  required uint32 plot_number = 1;
+  required uint32 milliseconds_tick = 2;
+  required string data_label = 3;
+  required int32 data_point = 4;
+}

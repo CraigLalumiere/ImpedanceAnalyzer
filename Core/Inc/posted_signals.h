@@ -11,8 +11,10 @@ enum PostedSignals
     POSTED_FIRST_SIG = PUBSUB_MAX_SIG,
     POSTED_BLINKY_TOGGLE_USER_LED,
     POSTED_APP_CLI_PRINT_SIG,
+    POSTED_PC_COM_PRINT_SIG,
+    POSTED_PC_COM_CLI_DATA_SIG,
     POSTED_FORCE_FAULT_SIG,
-    POSTED_UART_COMPLETE_SIG,
+    POSTED_WAVEFORM_CAPTURE_COMPLETE_SIG,
     POSTED_MAX_SIG
 };
 
@@ -23,17 +25,6 @@ enum DispatchedSignals
     DISPATCHED_MAX_SIG
 };
 
-
-#define PRINT_EVENT_MAX_MSG_LENGTH 64
-
-typedef struct
-{
-    QEvt super;
-
-    uint32_t milliseconds;
-    char msg[PRINT_EVENT_MAX_MSG_LENGTH];
-} PrintEvent_T;
-
 /**************************************************************************************************\
 * Debug/misc events
 \**************************************************************************************************/
@@ -43,6 +34,5 @@ typedef struct
     QEvt super;
     uint32_t desiredFault;
 } DebugForceFaultEvent_T;
-
 
 #endif // POSTED_SIGNALS_H_
