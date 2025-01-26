@@ -8,5 +8,5 @@ enum MessageType {
     CLI_DATA = 2;    
 
     // Add datapoint to some plot
-    AddToPlot = 3;
+    ADD_TO_PLOT = 3;
 }
