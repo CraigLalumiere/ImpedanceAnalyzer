@@ -16,7 +16,7 @@ typedef enum _MessageType {
     /* CLI Data */
     MessageType_CLI_DATA = 2,
     /* Add datapoint to some plot */
-    MessageType_AddToPlot = 3
+    MessageType_ADD_TO_PLOT = 3
 } MessageType;
 
 #ifdef __cplusplus
@@ -25,8 +25,8 @@ extern "C" {
 
 /* Helper constants for enums */
 #define _MessageType_MIN MessageType_LOG_PRINT
-#define _MessageType_MAX MessageType_AddToPlot
-#define _MessageType_ARRAYSIZE ((MessageType)(MessageType_AddToPlot+1))
+#define _MessageType_MAX MessageType_ADD_TO_PLOT
+#define _MessageType_ARRAYSIZE ((MessageType)(MessageType_ADD_TO_PLOT+1))
 
 
 #ifdef __cplusplus

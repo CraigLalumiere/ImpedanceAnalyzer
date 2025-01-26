@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto2',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x11MessageType.proto*9\n\x0bMessageType\x12\r\n\tLOG_PRINT\x10\x01\x12\x0c\n\x08\x43LI_DATA\x10\x02\x12\r\n\tAddToPlot\x10\x03'
+  serialized_pb=b'\n\x11MessageType.proto*;\n\x0bMessageType\x12\r\n\tLOG_PRINT\x10\x01\x12\x0c\n\x08\x43LI_DATA\x10\x02\x12\x0f\n\x0b\x41\x44\x44_TO_PLOT\x10\x03'
 )
 
 _MESSAGETYPE = _descriptor.EnumDescriptor(
@@ -41,7 +41,7 @@ _MESSAGETYPE = _descriptor.EnumDescriptor(
       type=None,
       create_key=_descriptor._internal_create_key),
     _descriptor.EnumValueDescriptor(
-      name='AddToPlot', index=2, number=3,
+      name='ADD_TO_PLOT', index=2, number=3,
       serialized_options=None,
       type=None,
       create_key=_descriptor._internal_create_key),
@@ -49,14 +49,14 @@ _MESSAGETYPE = _descriptor.EnumDescriptor(
   containing_type=None,
   serialized_options=None,
   serialized_start=21,
-  serialized_end=78,
+  serialized_end=80,
 )
 _sym_db.RegisterEnumDescriptor(_MESSAGETYPE)
 
 MessageType = enum_type_wrapper.EnumTypeWrapper(_MESSAGETYPE)
 LOG_PRINT = 1
 CLI_DATA = 2
-AddToPlot = 3
+ADD_TO_PLOT = 3
 
 
 DESCRIPTOR.enum_types_by_name['MessageType'] = _MESSAGETYPE
