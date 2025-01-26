@@ -4,7 +4,7 @@
 *                         www.segger.com                             *
 **********************************************************************
 
-File          : //wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/bodePlotterWSL/Nucleo.jdebug
+File          : //wsl.localhost/Ubuntu/home/clalumiere/Jobs/personal/nucleo-g474-template/Nucleo.jdebug
 Created       : 24 Jan 2025 19:21
 Ozone Version : V3.34
 */
@@ -22,8 +22,8 @@ void OnProjectLoad (void) {
   //
   // Dialog-generated settings
   //
-  Project.AddPathSubstitute ("workspaces/bodePlotterWSL", "$(ProjectDir)");
-  Project.AddPathSubstitute ("workspaces/bodeplotterwsl", "$(ProjectDir)");
+  Project.AddPathSubstitute ("workspaces/nucleo-g474-template", "$(ProjectDir)");
+  Project.AddPathSubstitute ("workspaces/nucleo-g474-template", "$(ProjectDir)");
   Project.SetDevice ("STM32G474RE");
   Project.SetHostIF ("USB", "");
   Project.SetTargetIF ("SWD");

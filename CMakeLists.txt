@@ -93,7 +93,7 @@ set(sources_SRCS
     ${PROJ_PATH}/Core/services/fault_manager.c
     ${PROJ_PATH}/Core/services/blinky.c  
     ${PROJ_PATH}/Core/services/analyzer.c  
-    ${PROJ_PATH}/Core/services/reset.c        
+    ${PROJ_PATH}/Core/services/reset.c
     ${PROJ_PATH}/Core/services/reset_reason_print.c    
     ${PROJ_PATH}/Core/services/pc_com/hdlc.c
     ${PROJ_PATH}/Core/services/pc_com/crc16.c
