@@ -1,21 +1,21 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.h
-  * @brief          : Header for main.c file.
-  *                   This file contains the common defines of the application.
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2024 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.h
+ * @brief          : Header for main.c file.
+ *                   This file contains the common defines of the application.
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2024 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
@@ -59,15 +59,15 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define FW_LED_Pin GPIO_PIN_5
-#define FW_LED_GPIO_Port GPIOA
-#define GS1_Pin GPIO_PIN_3
-#define GS1_GPIO_Port GPIOB
-#define GS2_Pin GPIO_PIN_4
-#define GS2_GPIO_Port GPIOB
-#define GS0_Pin GPIO_PIN_5
-#define GS0_GPIO_Port GPIOB
-#define DEBUG_GPIO_Pin GPIO_PIN_6
+#define FW_LED_Pin           GPIO_PIN_5
+#define FW_LED_GPIO_Port     GPIOA
+#define GS1_Pin              GPIO_PIN_3
+#define GS1_GPIO_Port        GPIOB
+#define GS2_Pin              GPIO_PIN_4
+#define GS2_GPIO_Port        GPIOB
+#define GS0_Pin              GPIO_PIN_5
+#define GS0_GPIO_Port        GPIOB
+#define DEBUG_GPIO_Pin       GPIO_PIN_6
 #define DEBUG_GPIO_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */

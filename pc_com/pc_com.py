@@ -103,10 +103,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
                 if self.outfile_errors is not None:
                     self.outfile_errors.close()
-        elif evt['event'] == 'connection_status_changed':
-            self.plot_manager.reset_plots()
 
-            self.update_interface_state()      
+            self.update_interface_state()
+
+        elif evt['event'] == 'connection_status_changed':
+            self.plot_manager.reset_plots()   
 
     def on_btn_browse_clicked(self):
         folder = QFileDialog.getExistingDirectory(None,
