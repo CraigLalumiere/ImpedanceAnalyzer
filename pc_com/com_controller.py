@@ -52,7 +52,7 @@ class ComController:
                 event_q=self.event_q,
                 command_q=self.command_q,
                 port_num=port,
-                port_baud=115200)
+                port_baud=500000)
 
             self.com_thread.start()
 
