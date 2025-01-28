@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto2',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x0f\x41\x64\x64ToPlot.proto\"c\n\tAddToPlot\x12\x13\n\x0bplot_number\x18\x01 \x02(\r\x12\x19\n\x11milliseconds_tick\x18\x02 \x02(\r\x12\x12\n\ndata_label\x18\x03 \x02(\t\x12\x12\n\ndata_point\x18\x04 \x02(\x05'
+  serialized_pb=b'\n\x0f\x41\x64\x64ToPlot.proto\"c\n\tAddToPlot\x12\x13\n\x0bplot_number\x18\x01 \x02(\r\x12\x19\n\x11milliseconds_tick\x18\x02 \x02(\r\x12\x12\n\ndata_label\x18\x03 \x02(\t\x12\x12\n\ndata_point\x18\x04 \x02(\x02'
 )
 
 
@@ -56,8 +56,8 @@ _ADDTOPLOT = _descriptor.Descriptor(
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
       name='data_point', full_name='AddToPlot.data_point', index=3,
-      number=4, type=5, cpp_type=1, label=2,
-      has_default_value=False, default_value=0,
+      number=4, type=2, cpp_type=6, label=2,
+      has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),

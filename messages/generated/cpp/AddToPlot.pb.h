@@ -243,17 +243,17 @@ class AddToPlot PROTOBUF_FINAL :
   void _internal_set_milliseconds_tick(::PROTOBUF_NAMESPACE_ID::uint32 value);
   public:
 
-  // required int32 data_point = 4;
+  // required float data_point = 4;
   bool has_data_point() const;
   private:
   bool _internal_has_data_point() const;
   public:
   void clear_data_point();
-  ::PROTOBUF_NAMESPACE_ID::int32 data_point() const;
-  void set_data_point(::PROTOBUF_NAMESPACE_ID::int32 value);
+  float data_point() const;
+  void set_data_point(float value);
   private:
-  ::PROTOBUF_NAMESPACE_ID::int32 _internal_data_point() const;
-  void _internal_set_data_point(::PROTOBUF_NAMESPACE_ID::int32 value);
+  float _internal_data_point() const;
+  void _internal_set_data_point(float value);
   public:
 
   // @@protoc_insertion_point(class_scope:AddToPlot)
@@ -271,7 +271,7 @@ class AddToPlot PROTOBUF_FINAL :
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr data_label_;
   ::PROTOBUF_NAMESPACE_ID::uint32 plot_number_;
   ::PROTOBUF_NAMESPACE_ID::uint32 milliseconds_tick_;
-  ::PROTOBUF_NAMESPACE_ID::int32 data_point_;
+  float data_point_;
   friend struct ::TableStruct_AddToPlot_2eproto;
 };
 // ===================================================================
@@ -434,7 +434,7 @@ inline void AddToPlot::unsafe_arena_set_allocated_data_label(
   // @@protoc_insertion_point(field_unsafe_arena_set_allocated:AddToPlot.data_label)
 }
 
-// required int32 data_point = 4;
+// required float data_point = 4;
 inline bool AddToPlot::_internal_has_data_point() const {
   bool value = (_has_bits_[0] & 0x00000008u) != 0;
   return value;
@@ -446,18 +446,18 @@ inline void AddToPlot::clear_data_point() {
   data_point_ = 0;
   _has_bits_[0] &= ~0x00000008u;
 }
-inline ::PROTOBUF_NAMESPACE_ID::int32 AddToPlot::_internal_data_point() const {
+inline float AddToPlot::_internal_data_point() const {
   return data_point_;
 }
-inline ::PROTOBUF_NAMESPACE_ID::int32 AddToPlot::data_point() const {
+inline float AddToPlot::data_point() const {
   // @@protoc_insertion_point(field_get:AddToPlot.data_point)
   return _internal_data_point();
 }
-inline void AddToPlot::_internal_set_data_point(::PROTOBUF_NAMESPACE_ID::int32 value) {
+inline void AddToPlot::_internal_set_data_point(float value) {
   _has_bits_[0] |= 0x00000008u;
   data_point_ = value;
 }
-inline void AddToPlot::set_data_point(::PROTOBUF_NAMESPACE_ID::int32 value) {
+inline void AddToPlot::set_data_point(float value) {
   _internal_set_data_point(value);
   // @@protoc_insertion_point(field_set:AddToPlot.data_point)
 }

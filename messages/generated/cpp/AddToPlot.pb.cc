@@ -62,7 +62,7 @@ static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] =
 const char descriptor_table_protodef_AddToPlot_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\017AddToPlot.proto\"c\n\tAddToPlot\022\023\n\013plot_n"
   "umber\030\001 \002(\r\022\031\n\021milliseconds_tick\030\002 \002(\r\022\022"
-  "\n\ndata_label\030\003 \002(\t\022\022\n\ndata_point\030\004 \002(\005"
+  "\n\ndata_label\030\003 \002(\t\022\022\n\ndata_point\030\004 \002(\002"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_AddToPlot_2eproto_deps[1] = {
 };
@@ -214,12 +214,12 @@ const char* AddToPlot::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
-      // required int32 data_point = 4;
+      // required float data_point = 4;
       case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 32)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 37)) {
           _Internal::set_has_data_point(&has_bits);
-          data_point_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
-          CHK_(ptr);
+          data_point_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<float>(ptr);
+          ptr += sizeof(float);
         } else goto handle_unusual;
         continue;
       default: {
@@ -274,10 +274,10 @@ failure:
         3, this->_internal_data_label(), target);
   }
 
-  // required int32 data_point = 4;
+  // required float data_point = 4;
   if (cached_has_bits & 0x00000008u) {
     target = stream->EnsureSpace(target);
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(4, this->_internal_data_point(), target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteFloatToArray(4, this->_internal_data_point(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -314,10 +314,8 @@ size_t AddToPlot::RequiredFieldsByteSizeFallback() const {
   }
 
   if (_internal_has_data_point()) {
-    // required int32 data_point = 4;
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
-        this->_internal_data_point());
+    // required float data_point = 4;
+    total_size += 1 + 4;
   }
 
   return total_size;
@@ -342,10 +340,8 @@ size_t AddToPlot::ByteSizeLong() const {
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt32Size(
         this->_internal_milliseconds_tick());
 
-    // required int32 data_point = 4;
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
-        this->_internal_data_point());
+    // required float data_point = 4;
+    total_size += 1 + 4;
 
   } else {
     total_size += RequiredFieldsByteSizeFallback();

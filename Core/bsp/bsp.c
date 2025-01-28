@@ -15,7 +15,7 @@ Q_DEFINE_THIS_MODULE("bsp.c")
 \**************************************************************************************************/
 
 #define UART1_RX_BUFFER_LEN 128
-#define UART1_TX_BUFFER_LEN 2048
+#define UART1_TX_BUFFER_LEN 4096
 
 /**************************************************************************************************\
 * Private type definitions
@@ -44,6 +44,7 @@ const Serial_IO_T s_bsp_serial_io_uart = {
 extern UART_HandleTypeDef hlpuart1; // defined in main.c by cubeMX
 extern DAC_HandleTypeDef hdac1;     // defined in main.c by cubeMX
 extern ADC_HandleTypeDef hadc1;     // defined in main.c by cubeMX
+extern ADC_HandleTypeDef hadc2;     // defined in main.c by cubeMX
 
 static UART_T s_lpuart1;
 static uint8_t s_rx_data_buffer[UART1_RX_BUFFER_LEN] = {0};
@@ -192,9 +193,13 @@ void BSP_Stop_ADC_DAC_DMA()
 
     retval = HAL_ADC_Stop_DMA(&hadc1);
     Q_ASSERT(retval == HAL_OK);
+
+    retval = HAL_ADC_Stop_DMA(&hadc2);
+    Q_ASSERT(retval == HAL_OK);
 }
 void BSP_Setup_ADC_DAC_DMA(
-    uint16_t adc_dma_buffer[],
+    uint16_t adc1_dma_buffer[],
+    uint16_t adc2_dma_buffer[],
     uint16_t adc_data_width,
     uint16_t dac_dma_buffer[],
     uint16_t dac_data_width,
@@ -203,7 +208,9 @@ void BSP_Setup_ADC_DAC_DMA(
     HAL_StatusTypeDef retval;
 
     // Start ADC DMA
-    retval = HAL_ADC_Start_DMA(&hadc1, (uint32_t *) adc_dma_buffer, adc_data_width);
+    retval = HAL_ADC_Start_DMA(&hadc1, (uint32_t *) adc1_dma_buffer, adc_data_width);
+    Q_ASSERT(retval == HAL_OK);
+    retval = HAL_ADC_Start_DMA(&hadc2, (uint32_t *) adc2_dma_buffer, adc_data_width);
     Q_ASSERT(retval == HAL_OK);
 
     // Start DAC DMA - it draws exactly one period at 3x the resolution as the ADC
@@ -214,6 +221,7 @@ void BSP_Setup_ADC_DAC_DMA(
     // setup CCR for TIM1 to generate exactly 10x periods
     // this is the number of DAC pulses to be generated, so it must be a multiple of 3 to keep the
     // ADC happy
+    TIM1->CNT  = dac_total_clock_periods; // ensure timer doesn't start
     TIM1->CCR2 = dac_total_clock_periods; // number of pulses is equal to this number
 }
 
@@ -413,7 +421,7 @@ static HAL_StatusTypeDef myHAL_DAC_Stop_DMA(DAC_HandleTypeDef *hdac, uint32_t Ch
 static void Configure_lpuart1(UART_Config_T *p_uart_config)
 {
     p_uart_config->uart_id            = LPUART_ID_1;
-    p_uart_config->baud_rate_bps      = 115200;
+    p_uart_config->baud_rate_bps      = 500000;
     p_uart_config->n_data_bits        = 8;
     p_uart_config->n_stop_bits        = 1;
     p_uart_config->parity             = UART_PARITY_VAL_NONE;

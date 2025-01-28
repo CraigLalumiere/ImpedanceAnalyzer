@@ -15,7 +15,9 @@
         "hdlc.h": "c",
         "string.h": "c",
         "clidata.pb.h": "c",
-        "messagetype.pb.h": "c"
+        "messagetype.pb.h": "c",
+        "analyzer.h": "c",
+        "bsp.h": "c"
     },
     "editor.rulers": [
         100

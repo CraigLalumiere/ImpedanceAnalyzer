@@ -13,7 +13,7 @@ Q_DEFINE_THIS_MODULE("analyzer")
 * Private macros
 \**************************************************************************************************/
 
-#define ADC_DOWNSAMPLING_RATE   3 // ADC clock runs 3x slower than DAC clock
+#define ADC_DOWNSAMPLING_RATE   5 // ADC clock runs 3x slower than DAC clock
 #define ADC_DMA_BUFFER_MAX_SIZE 512
 #define DAC_DMA_BUFFER_MAX_SIZE ADC_DOWNSAMPLING_RATE *ADC_DMA_BUFFER_MAX_SIZE
 
@@ -23,6 +23,9 @@ Q_DEFINE_THIS_MODULE("analyzer")
 #define SINUSOID_AMP 1024 // resolution of sin/cos for fourier transform
 
 #define NUM_PERIODS 10 // (minimum) number of sinusoid waveforms to generate on DAC
+
+#define MINIMUM_VOLTAGE_ACROSS_LOAD_RESISTOR 50
+#define MAXIMUM_VOLTAGE_ACROSS_LOAD_RESISTOR 100
 
 #define max(a, b)           \
     ({                      \
@@ -59,13 +62,16 @@ typedef struct
     uint32_t freq_end;
     uint16_t num_freq_points;
 
+    Source_Impedance_T source_impedance;
+
     uint32_t freq_list[FREQ_POINTS_MAX];
     uint16_t freq_index;
 
     uint16_t dac_dma_buffer[DAC_DMA_BUFFER_MAX_SIZE];
     int16_t sine_buffer[ADC_DMA_BUFFER_MAX_SIZE];
     int16_t cosine_buffer[ADC_DMA_BUFFER_MAX_SIZE];
-    uint16_t adc_dma_buffer[ADC_DMA_BUFFER_MAX_SIZE];
+    int16_t adc1_dma_buffer[ADC_DMA_BUFFER_MAX_SIZE];
+    int16_t adc2_dma_buffer[ADC_DMA_BUFFER_MAX_SIZE];
 
     uint16_t dac_dma_data_len;
     uint16_t adc_dma_data_len;
@@ -94,13 +100,11 @@ static QState sinusoid_complete(Analyzer *const me, QEvt const *const e);
 static uint32_t PeriodToFrequency(uint32_t period);
 static void InitFrequenciesToSweep();
 static void GenerateSinusoid(uint32_t frequency);
-static MagPhase_T ADC_FourierAnalysis(uint16_t *data, uint16_t data_len);
+static MagPhase_T ADC_FourierAnalysis(int16_t *data, uint16_t data_len);
 
-static void log_data(uint8_t plot_number, const char *data_label, int32_t data_point);
+static void log_data(uint8_t plot_number, const char *data_label, float32_t data_point);
 static void log_data_block(
     uint8_t plot_number, const char *data_label, float32_t *data_points, int16_t data_len);
-static void log_data_block_uint(
-    uint8_t plot_number, const char *data_label, uint16_t *data_points, int16_t data_len);
 
 /**************************************************************************************************\
 * Private memory declarations
@@ -120,13 +124,16 @@ void Analyzer_ctor(void)
     QActive_ctor(&me->super, Q_STATE_CAST(&initial));
     QTimeEvt_ctorX(&me->timeEvt, &me->super, TIMEOUT_SIG, 0U);
 
-    memset(me->adc_dma_buffer, 0, ADC_DMA_BUFFER_MAX_SIZE * sizeof(me->adc_dma_buffer[0]));
+    memset(me->adc1_dma_buffer, 0, ADC_DMA_BUFFER_MAX_SIZE * sizeof(me->adc1_dma_buffer[0]));
+    memset(me->adc2_dma_buffer, 0, ADC_DMA_BUFFER_MAX_SIZE * sizeof(me->adc2_dma_buffer[0]));
 
     me->freq_start      = 10000;
     me->freq_end        = 200000;
     me->num_freq_points = 100;
 
-    BSP_Set_Source_Impedance(IMPEDANCE_10k);
+    me->source_impedance = IMPEDANCE_10k;
+
+    BSP_Set_Source_Impedance(me->source_impedance);
 
     InitFrequenciesToSweep();
 }
@@ -160,7 +167,7 @@ QState initial(Analyzer *const me, void const *const par)
 {
     Q_UNUSED_PAR(par);
 
-    QTimeEvt_armX(&me->timeEvt, BSP_TICKS_PER_SEC / 1U, BSP_TICKS_PER_SEC / 1U);
+    QTimeEvt_armX(&me->timeEvt, BSP_TICKS_PER_SEC / 2U, BSP_TICKS_PER_SEC / 2U);
 
     return Q_TRAN(&top);
 }
@@ -257,8 +264,6 @@ QState begin_sinusoid(Analyzer *const me, QEvt const *const e)
     switch (e->sig)
     {
         case Q_ENTRY_SIG: {
-            memset(me->adc_dma_buffer, 100, ADC_DMA_BUFFER_MAX_SIZE);
-
             BSP_Stop_ADC_DAC_DMA();
             GenerateSinusoid(me->freq_list[me->freq_index]);
             uint16_t dac_total_clock_periods = max(
@@ -267,23 +272,44 @@ QState begin_sinusoid(Analyzer *const me, QEvt const *const e)
             dac_total_clock_periods++;
 
             BSP_Setup_ADC_DAC_DMA(
-                me->adc_dma_buffer,
+                me->adc1_dma_buffer,
+                me->adc2_dma_buffer,
                 me->adc_dma_data_len,
                 me->dac_dma_buffer,
                 me->dac_dma_data_len,
                 dac_total_clock_periods);
             BSP_Start_Waveform_Timer();
 
-            // log_data(1, "label", 100 * sin(BSP_Get_Milliseconds_Tick()));
-
             status = Q_HANDLED();
             break;
         }
         case POSTED_WAVEFORM_CAPTURE_COMPLETE_SIG: {
-            MagPhase_T result = ADC_FourierAnalysis(me->adc_dma_buffer, me->adc_dma_data_len);
-            (void) result;
+            // Voltage across source impedance is ADC2-ADC1
 
-            log_data_block_uint(0, "ADC", me->adc_dma_buffer, me->adc_dma_data_len);
+            // Change ADC1 in place to be the difference of the two measurements, which is the
+            // voltage across the source resistor
+            for (int i = 0; i < me->adc_dma_data_len; i++)
+            {
+                me->adc1_dma_buffer[i] = me->adc2_dma_buffer[i] - me->adc1_dma_buffer[i];
+            }
+            MagPhase_T source_resistor = ADC_FourierAnalysis(
+                me->adc1_dma_buffer, me->adc_dma_data_len);
+            MagPhase_T source = ADC_FourierAnalysis(me->adc2_dma_buffer, me->adc_dma_data_len);
+
+            log_data(1, "Vsr", source_resistor.magnitude);
+            log_data(2, "Vsr", source_resistor.phase);
+
+            static float32_t adc1_data_float[512];
+            static float32_t adc2_data_float[512];
+
+            for (int i = 0; i < me->adc_dma_data_len; i++)
+            {
+                adc1_data_float[i] = (float32_t) me->adc1_dma_buffer[i];
+                adc2_data_float[i] = (float32_t) me->adc2_dma_buffer[i];
+            }
+
+            log_data_block(0, "ADC1", adc1_data_float, me->adc_dma_data_len);
+            log_data_block(0, "ADC2", adc2_data_float, me->adc_dma_data_len);
 
             status = Q_TRAN(&standby);
             break;
@@ -322,7 +348,7 @@ QState sinusoid_complete(Analyzer *const me, QEvt const *const e)
 
 static uint32_t PeriodToFrequency(uint32_t period)
 {
-    return 15272727ul / period / ADC_DOWNSAMPLING_RATE;
+    return 12000000ul / period / ADC_DOWNSAMPLING_RATE;
 }
 
 /**
@@ -398,7 +424,7 @@ static void GenerateSinusoid(uint32_t frequency)
  *
  **************************************************************************************************/
 
-static MagPhase_T ADC_FourierAnalysis(uint16_t *data, uint16_t data_len)
+static MagPhase_T ADC_FourierAnalysis(int16_t *data, uint16_t data_len)
 {
     Analyzer *const me = &Analyzer_inst;
 
@@ -441,7 +467,7 @@ static MagPhase_T ADC_FourierAnalysis(uint16_t *data, uint16_t data_len)
     // }
 }
 
-static void log_data(const uint8_t plot_number, const char *data_label, const int32_t data_point)
+static void log_data(const uint8_t plot_number, const char *data_label, const float32_t data_point)
 {
     AddDataToPlotEvent_T *event = Q_NEW(AddDataToPlotEvent_T, PUBSUB_ADD_DATA_TO_PLOT_SIG);
     event->milliseconds         = BSP_Get_Milliseconds_Tick();
@@ -462,17 +488,4 @@ static void log_data_block(
     event->data_len    = data_len;
 
     QACTIVE_PUBLISH(&event->super, &me->super);
-}
-
-static void log_data_block_uint(
-    uint8_t plot_number, const char *data_label, uint16_t *data_points, int16_t data_len)
-{
-    static float32_t temp_data[512];
-
-    for (int i = 0; i < data_len; i++)
-    {
-        temp_data[i] = (float32_t) data_points[i];
-    }
-
-    log_data_block(plot_number, data_label, temp_data, data_len);
 }

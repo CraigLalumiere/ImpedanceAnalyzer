@@ -46,7 +46,7 @@ typedef struct
     uint8_t plot_number;
     uint32_t milliseconds;
     char data_label[16];
-    int32_t data_point;
+    float32_t data_point;
 } AddDataToPlotEvent_T;
 
 typedef struct

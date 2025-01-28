@@ -122,33 +122,6 @@ DMA_HandleTypeDef hdma_tim1_up;
 
 /* USER CODE BEGIN PV */
 
-uint16_t dac_dma_buffer[DAC_DMA_BUFFER_MAX_SIZE];
-int16_t sine_buffer[ADC_DMA_BUFFER_MAX_SIZE];
-int16_t cosine_buffer[ADC_DMA_BUFFER_MAX_SIZE];
-uint16_t adc_dma_buffer[ADC_DMA_BUFFER_MAX_SIZE];
-
-uint16_t dma_data_len = 100;
-
-bool ADC_sampling_complete   = false;
-bool calibrationRequested    = false;
-bool calibrating             = false;
-bool calibrated              = false;
-bool fourierAnalysisComplete = true; // starts as true so that first conversion starts
-
-uint16_t waveform_period; // number of ADC samples in a period (DAC will be 3x more)
-double amp_cal_list[NUM_FREQ_POINTS];
-double phase_cal_list[NUM_FREQ_POINTS];
-uint16_t curr_freq_index = 0xFFF0;
-
-// UART receive buffer
-char rx_byte;
-char rx_buff[10];
-uint8_t rx_num_bytes    = 0;
-__IO ITStatus UartReady = RESET;
-__IO ITStatus UartError = RESET;
-
-uint16_t blinky_counter = 0;
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -249,6 +222,7 @@ int main(void)
 
     // ADC setup
     HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
+    HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED);
 
     // __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_CC2);
     // TIM1->CNT = 0x0; // begin timer
@@ -335,50 +309,6 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-    //   if (ADC_sampling_complete)
-    //   {
-    //     ADC_FourierAnalysis();
-    //   }
-
-    //   if (fourierAnalysisComplete)
-    //   {
-    //     fourierAnalysisComplete = false;
-    //     curr_freq_index++;
-    //     // if we're beginning a new sweep
-    //     if (curr_freq_index >= NUM_FREQ_POINTS)
-    //     {
-    //       curr_freq_index = 0;
-    //       if (calibrationRequested)
-    //       {
-    //         calibrationRequested = false;
-    //         calibrating = true;
-    //         sprintf(printBuffer, "Beginning Calibration\n\r");
-    //         HAL_UART_Transmit(&hlpuart1, (uint8_t *)printBuffer, sizeof(printBuffer), 0xfff);
-    //       }
-    //       else if (calibrating)
-    //       {
-    //         calibrating = false;
-    //         calibrated = true;
-    //       }
-    //       memset(printBuffer, 0, sizeof(printBuffer));
-    //       sprintf(printBuffer, "\n\rF\tI\tQ\tamp\tangle\tTHD\n\r");
-    //       HAL_UART_Transmit(&hlpuart1, (uint8_t *)printBuffer, sizeof(printBuffer), 0xfff);
-    //     }
-    //     waveform_period = periods_list[curr_freq_index];
-    //     // waveform_period = 17;
-
-    //     DAC_ADC_Setup_DMA();
-    //     DMA_timer_reset();
-    //   }
-
-    //   if (blinky_counter++ == 5)
-    //   {
-    //     blinky_counter = 0;
-    //     HAL_GPIO_TogglePin(FW_LED_GPIO_Port, FW_LED_Pin);
-    //   }
-    //   // printf("hello world\n\r");
-    //   HAL_Delay(1);
-    // }
     /* USER CODE END 3 */
 }
 
@@ -526,7 +456,7 @@ static void MX_ADC2_Init(void)
     hadc2.Init.DiscontinuousConvMode = DISABLE;
     hadc2.Init.ExternalTrigConv      = ADC_EXTERNALTRIG_T8_TRGO2;
     hadc2.Init.ExternalTrigConvEdge  = ADC_EXTERNALTRIGCONVEDGE_RISING;
-    hadc2.Init.DMAContinuousRequests = DISABLE;
+    hadc2.Init.DMAContinuousRequests = ENABLE;
     hadc2.Init.Overrun               = ADC_OVR_DATA_OVERWRITTEN;
     hadc2.Init.OversamplingMode      = DISABLE;
     if (HAL_ADC_Init(&hadc2) != HAL_OK)
@@ -611,7 +541,7 @@ static void MX_LPUART1_UART_Init(void)
 
     /* USER CODE END LPUART1_Init 1 */
     hlpuart1.Instance                    = LPUART1;
-    hlpuart1.Init.BaudRate               = 115200;
+    hlpuart1.Init.BaudRate               = 500000;
     hlpuart1.Init.WordLength             = UART_WORDLENGTH_8B;
     hlpuart1.Init.StopBits               = UART_STOPBITS_1;
     hlpuart1.Init.Parity                 = UART_PARITY_NONE;
@@ -745,9 +675,9 @@ static void MX_TIM8_Init(void)
     htim8.Instance               = TIM8;
     htim8.Init.Prescaler         = 0;
     htim8.Init.CounterMode       = TIM_COUNTERMODE_UP;
-    htim8.Init.Period            = 10;
+    htim8.Init.Period            = 13;
     htim8.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
-    htim8.Init.RepetitionCounter = 3 - 1;
+    htim8.Init.RepetitionCounter = 5 - 1;
     htim8.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
     if (HAL_TIM_Base_Init(&htim8) != HAL_OK)
     {

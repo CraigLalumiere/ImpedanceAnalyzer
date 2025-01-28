@@ -15,7 +15,7 @@ typedef struct _AddToPlot {
     uint32_t plot_number;
     uint32_t milliseconds_tick;
     char data_label[16];
-    int32_t data_point;
+    float data_point;
 } AddToPlot;
 
 
@@ -38,7 +38,7 @@ extern "C" {
 X(a, STATIC,   REQUIRED, UINT32,   plot_number,       1) \
 X(a, STATIC,   REQUIRED, UINT32,   milliseconds_tick,   2) \
 X(a, STATIC,   REQUIRED, STRING,   data_label,        3) \
-X(a, STATIC,   REQUIRED, INT32,    data_point,        4)
+X(a, STATIC,   REQUIRED, FLOAT,    data_point,        4)
 #define AddToPlot_CALLBACK NULL
 #define AddToPlot_DEFAULT NULL
 
@@ -49,7 +49,7 @@ extern const pb_msgdesc_t AddToPlot_msg;
 
 /* Maximum encoded size of messages (where known) */
 #define ADDTOPLOT_PB_H_MAX_SIZE                  AddToPlot_size
-#define AddToPlot_size                           40
+#define AddToPlot_size                           34
 
 #ifdef __cplusplus
 } /* extern "C" */
