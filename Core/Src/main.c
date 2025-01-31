@@ -401,7 +401,9 @@ static void MX_ADC1_Init(void)
 
     /** Configure the ADC multi-mode
      */
-    multimode.Mode = ADC_MODE_INDEPENDENT;
+    multimode.Mode             = ADC_DUALMODE_REGSIMULT;
+    multimode.DMAAccessMode    = ADC_DMAACCESSMODE_DISABLED;
+    multimode.TwoSamplingDelay = ADC_TWOSAMPLINGDELAY_1CYCLE;
     if (HAL_ADCEx_MultiModeConfigChannel(&hadc1, &multimode) != HAL_OK)
     {
         Error_Handler();
@@ -454,8 +456,6 @@ static void MX_ADC2_Init(void)
     hadc2.Init.ContinuousConvMode    = DISABLE;
     hadc2.Init.NbrOfConversion       = 1;
     hadc2.Init.DiscontinuousConvMode = DISABLE;
-    hadc2.Init.ExternalTrigConv      = ADC_EXTERNALTRIG_T8_TRGO2;
-    hadc2.Init.ExternalTrigConvEdge  = ADC_EXTERNALTRIGCONVEDGE_RISING;
     hadc2.Init.DMAContinuousRequests = ENABLE;
     hadc2.Init.Overrun               = ADC_OVR_DATA_OVERWRITTEN;
     hadc2.Init.OversamplingMode      = DISABLE;
@@ -761,6 +761,9 @@ static void MX_DMA_Init(void)
     /* DMA1_Channel4_IRQn interrupt configuration */
     HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+    /* DMAMUX_OVR_IRQn interrupt configuration */
+    HAL_NVIC_SetPriority(DMAMUX_OVR_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(DMAMUX_OVR_IRQn);
 }
 
 /**
