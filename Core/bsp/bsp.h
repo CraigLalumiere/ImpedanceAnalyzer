@@ -67,8 +67,7 @@ void BSP_debug_gpio_toggle(void);
 void BSP_Set_DAC(uint16_t value);
 void BSP_Stop_ADC_DAC_DMA();
 void BSP_Setup_ADC_DAC_DMA(
-    int16_t adc1_dma_buffer[],
-    int16_t adc2_dma_buffer[],
+    uint32_t adc_dma_buffer[],
     uint16_t adc_data_width,
     uint16_t dac_dma_buffer[],
     uint16_t dac_data_width,

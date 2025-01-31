@@ -118,29 +118,29 @@ set(sources_SRCS
 
 
     # HAL
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal.c
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_cortex.c
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pcd.c
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pcd_ex.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_cortex.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pcd.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pcd_ex.c
     
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr.c
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_rcc.c
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_rcc_ex.c
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_tim.c
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_fdcan.c
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_tim_ex.c
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_uart.c
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_ll_fmc.c
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_ll_usb.c
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_adc.c
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_adc_ex.c
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dma.c
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_spi.c
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dac.c
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dac_ex.c
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_uart_ex.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_rcc.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_rcc_ex.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_tim.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_fdcan.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_tim_ex.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_uart.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_ll_fmc.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_ll_usb.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_adc.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_adc_ex.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dma.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_spi.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dac.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dac_ex.c
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_uart_ex.c
     
 
 
@@ -175,8 +175,8 @@ set(include_path_DIRS
     
     ${LIBRARY_PATH}/tinyusb-0.17.0/src
 
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Inc
-    ${LIBRARY_PATH}/STM32G4xx_HAL_Driver/Inc/Legacy 
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Inc
+    ${DRIVERS_PATH}/STM32G4xx_HAL_Driver/Inc/Legacy 
        
     ${DRIVERS_PATH}/CMSIS/Device/ST/STM32G4xx/Include
     ${DRIVERS_PATH}/CMSIS/Include

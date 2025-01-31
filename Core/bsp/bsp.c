@@ -201,12 +201,11 @@ void BSP_Stop_ADC_DAC_DMA()
     retval = HAL_ADC_Stop_DMA(&hadc1);
     Q_ASSERT(retval == HAL_OK);
 
-    retval = HAL_ADC_Stop_DMA(&hadc2);
-    Q_ASSERT(retval == HAL_OK);
+    // retval = HAL_ADC_Stop_DMA(&hadc2);
+    // Q_ASSERT(retval == HAL_OK);
 }
 void BSP_Setup_ADC_DAC_DMA(
-    int16_t adc1_dma_buffer[],
-    int16_t adc2_dma_buffer[],
+    uint32_t adc_dma_buffer[],
     uint16_t adc_data_width,
     uint16_t dac_dma_buffer[],
     uint16_t dac_data_width,
@@ -215,15 +214,64 @@ void BSP_Setup_ADC_DAC_DMA(
     HAL_StatusTypeDef retval;
 
     // Start ADC DMA
-    retval = HAL_ADC_Start_DMA(&hadc1, (uint32_t *) adc1_dma_buffer, adc_data_width);
+    // retval = HAL_ADC_Start_DMA(&hadc1, (uint32_t *) adc1_dma_buffer, adc_data_width);
+    retval = HAL_ADC_Start(&hadc2);
     Q_ASSERT(retval == HAL_OK);
-    retval = HAL_ADC_Start_DMA(&hadc2, (uint32_t *) adc2_dma_buffer, adc_data_width);
+    retval = HAL_ADCEx_MultiModeStart_DMA(&hadc1, adc_dma_buffer, adc_data_width);
     Q_ASSERT(retval == HAL_OK);
+    // retval = HAL_ADC_Start_DMA(&hadc1, adc2_dma_buffer, adc_data_width);
+    // Q_ASSERT(retval == HAL_OK);
 
     // Start DAC DMA - it draws exactly one period at 3x the resolution as the ADC
     retval = HAL_DAC_Start_DMA(
         &hdac1, DAC_CHANNEL_1, (uint32_t *) dac_dma_buffer, dac_data_width, DAC_ALIGN_12B_R);
     Q_ASSERT(retval == HAL_OK);
+
+    (void) DMA1_Channel2->CPAR;
+    uint32_t temp = (uint32_t) & (ADC12_COMMON->CDR);
+    (void) DMA1_Channel2->CMAR;
+    // (void) (uint32_t) &obuff[0][0];
+    (void) DMA1_Channel2->CNDTR;
+    // (void) 1 * 1024;
+    (void) DMA1_Channel2->CCR;
+    temp = DMA_CCR_MINC | DMA_CCR_TCIE | DMA_CCR_EN | DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_0 |
+        DMA_CCR_TEIE | (DMA_CCR_PL_Msk);
+
+    (void) ADC12_COMMON->CCR;
+    // temp = (0b11 << ADC12_CCR_MDMA_Pos) | (0b111 << ADC12_CCR_MULTI_Pos);
+
+    (void) ADC1->CFGR;
+    ADC1->CFGR |= ADC_CFGR_DMAEN;
+    temp = ADC_CFGR_DMAEN | (0b10 << ADC_CFGR_RES_Pos);
+    (void) ADC1->CFGR;
+    temp = ~(
+        ADC_CFGR_EXTEN_Msk |
+        ADC_CFGR_EXTSEL_Msk); // software trigger only, converting as fast as possible
+    (void) ADC1->CFGR;
+    temp = ADC_CFGR_CONT;
+    (void) ADC1->SMPR1; // = 0;
+    (void) ADC1->SMPR2; // = 0;
+
+    (void) ADC1->SQR1;
+    temp = ~(ADC_SQR1_L_Msk);
+    (void) ADC1->SQR1;
+    temp = ~(ADC_SQR1_SQ1_Msk);
+    (void) ADC1->SQR1;
+    temp = (1 << ADC_SQR1_SQ1_Pos);
+
+    (void) ADC2->CFGR;
+    temp = ADC_CFGR_DMAEN | (0b10 << ADC_CFGR_RES_Pos);
+    (void) ADC2->SMPR1; // = 0;
+    (void) ADC2->SMPR2; // = 0;
+
+    (void) ADC2->SQR1;
+    temp = ~(ADC_SQR1_L_Msk);
+    (void) ADC2->SQR1;
+    temp = ~(ADC_SQR1_SQ1_Msk);
+    (void) ADC2->SQR1;
+    temp = (1 << ADC_SQR1_SQ1_Pos);
+    (void) ADC1->CR;
+    temp = ADC_CR_ADSTART;
 
     // setup CCR for TIM1 to generate exactly 10x periods
     // this is the number of DAC pulses to be generated, so it must be a multiple of 3 to keep the

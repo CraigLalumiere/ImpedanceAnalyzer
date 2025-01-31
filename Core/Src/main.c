@@ -140,6 +140,8 @@ static void MX_ADC2_Init(void);
 
 inline void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
+    static QEvt const event = QEVT_INITIALIZER(POSTED_WAVEFORM_CAPTURE_COMPLETE_SIG);
+    QACTIVE_POST(AO_Analyzer, &event, NULL);
 }
 inline void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc)
 {
@@ -164,11 +166,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 inline void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 {
-    if (htim->Instance == htim1.Instance)
-    {
-        static QEvt const event = QEVT_INITIALIZER(POSTED_WAVEFORM_CAPTURE_COMPLETE_SIG);
-        QACTIVE_POST(AO_Analyzer, &event, NULL);
-    }
+    // if (htim->Instance == htim1.Instance)
+    // {
+    //     static QEvt const event = QEVT_INITIALIZER(POSTED_WAVEFORM_CAPTURE_COMPLETE_SIG);
+    //     QACTIVE_POST(AO_Analyzer, &event, NULL);
+    // }
 }
 
 /* USER CODE END 0 */
@@ -236,7 +238,7 @@ int main(void)
     BSP_Init();
 
     // initialize event pools
-    static QF_MPOOL_EL(SmallMessageUnion_T) smlPoolSto[10];
+    static QF_MPOOL_EL(SmallMessageUnion_T) smlPoolSto[100];
     QF_poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
 
     static QF_MPOOL_EL(MediumMessageUnion_T) mediumPoolSto[10];
@@ -750,7 +752,7 @@ static void MX_DMA_Init(void)
     HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 1, 0);
     HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
     /* DMA1_Channel2_IRQn interrupt configuration */
-    HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 1, 0);
+    HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 4, 0);
     HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
 }
 

@@ -72,8 +72,7 @@ typedef struct
     uint16_t dac_dma_buffer[DAC_DMA_BUFFER_MAX_SIZE];
     int16_t sine_buffer[ADC_DMA_BUFFER_MAX_SIZE];
     int16_t cosine_buffer[ADC_DMA_BUFFER_MAX_SIZE];
-    int16_t adc1_dma_buffer[ADC_DMA_BUFFER_MAX_SIZE];
-    int16_t adc2_dma_buffer[ADC_DMA_BUFFER_MAX_SIZE];
+    uint32_t adc_dma_buffer[ADC_DMA_BUFFER_MAX_SIZE];
 
     uint16_t dac_dma_data_len;
     uint16_t adc_dma_data_len;
@@ -133,8 +132,7 @@ void Analyzer_ctor(void)
     QActive_ctor(&me->super, Q_STATE_CAST(&initial));
     QTimeEvt_ctorX(&me->timeEvt, &me->super, TIMEOUT_SIG, 0U);
 
-    memset(me->adc1_dma_buffer, 0, ADC_DMA_BUFFER_MAX_SIZE * sizeof(me->adc1_dma_buffer[0]));
-    memset(me->adc2_dma_buffer, 0, ADC_DMA_BUFFER_MAX_SIZE * sizeof(me->adc2_dma_buffer[0]));
+    memset(me->adc_dma_buffer, 0, ADC_DMA_BUFFER_MAX_SIZE * sizeof(me->adc_dma_buffer[0]));
 
     me->freq_start      = 100000;
     me->freq_end        = 400000;
@@ -180,13 +178,14 @@ QState initial(Analyzer *const me, void const *const par)
 {
     Q_UNUSED_PAR(par);
 
-    QTimeEvt_armX(&me->timeEvt, BSP_TICKS_PER_SEC / 2U, BSP_TICKS_PER_SEC / 2U);
+    QTimeEvt_armX(&me->timeEvt, BSP_TICKS_PER_SEC / 10U, BSP_TICKS_PER_SEC / 10U);
 
     // Initialize the DAC to the 'mid' level
-    me->dac_dma_buffer[0] = OUTPUT_MID;
-    BSP_Setup_ADC_DAC_DMA(
-        me->adc1_dma_buffer, me->adc2_dma_buffer, me->adc_dma_data_len, me->dac_dma_buffer, 1, 2);
-    BSP_Start_Waveform_Timer(10);
+    // me->dac_dma_buffer[0] = OUTPUT_MID;
+    // BSP_Setup_ADC_DAC_DMA(
+    //     me->adc1_dma_buffer, me->adc2_dma_buffer, me->adc_dma_data_len, me->dac_dma_buffer, 1,
+    //     2);
+    // BSP_Start_Waveform_Timer(10);
 
     return Q_TRAN(&top);
 }
@@ -296,8 +295,7 @@ QState begin_sinusoid(Analyzer *const me, QEvt const *const e)
             dac_total_clock_periods++;
 
             BSP_Setup_ADC_DAC_DMA(
-                me->adc1_dma_buffer,
-                me->adc2_dma_buffer,
+                me->adc_dma_buffer,
                 me->adc_dma_data_len,
                 me->dac_dma_buffer,
                 me->dac_dma_data_len,
@@ -307,8 +305,8 @@ QState begin_sinusoid(Analyzer *const me, QEvt const *const e)
             status = Q_HANDLED();
             break;
         }
-        case TIMEOUT_SIG: {
-            // case POSTED_WAVEFORM_CAPTURE_COMPLETE_SIG: {
+            // case TIMEOUT_SIG: {
+        case POSTED_WAVEFORM_CAPTURE_COMPLETE_SIG: {
             if (me->is_first_cycle)
             {
                 me->is_first_cycle = false;
@@ -321,8 +319,8 @@ QState begin_sinusoid(Analyzer *const me, QEvt const *const e)
 
             for (int i = 0; i < me->adc_dma_data_len; i++)
             {
-                adc1_data_float[i] = (float32_t) me->adc1_dma_buffer[i];
-                adc2_data_float[i] = (float32_t) me->adc2_dma_buffer[i];
+                adc1_data_float[i] = (float32_t) (me->adc_dma_buffer[i] & 0xFFF);
+                adc2_data_float[i] = (float32_t) (me->adc_dma_buffer[i] >> 16);
             }
 
             log_data_block(0, "delta", adc1_data_float, me->adc_dma_data_len);
@@ -332,15 +330,21 @@ QState begin_sinusoid(Analyzer *const me, QEvt const *const e)
 
             // Change ADC1 in place to be the difference of the two measurements, which is the
             // voltage across the source resistor
+            int16_t applied_voltage_waveform[ADC_DMA_BUFFER_MAX_SIZE];
+            int16_t voltage_across_resistor_waveform[ADC_DMA_BUFFER_MAX_SIZE];
             for (int i = 0; i < me->adc_dma_data_len; i++)
             {
-                me->adc1_dma_buffer[i] = me->adc2_dma_buffer[i] - me->adc1_dma_buffer[i];
+                int16_t v1 = me->adc_dma_buffer[i] & 0xFFF;
+                int16_t v2 = me->adc_dma_buffer[i] >> 16;
+
+                applied_voltage_waveform[i]         = v2;
+                voltage_across_resistor_waveform[i] = v2 - v1;
             }
             MagPhase_T resistor_voltage = ADC_FourierAnalysis(
-                me->adc1_dma_buffer, me->adc_dma_data_len);
+                voltage_across_resistor_waveform, me->adc_dma_data_len);
 
             MagPhase_T applied_voltage = ADC_FourierAnalysis(
-                me->adc2_dma_buffer, me->adc_dma_data_len);
+                applied_voltage_waveform, me->adc_dma_data_len);
 
             // // if the source resistor voltage is too small, impedance should be increased
             // if (resistor_voltage.magnitude < MINIMUM_VOLTAGE_ACROSS_LOAD_RESISTOR &&
@@ -371,7 +375,7 @@ QState begin_sinusoid(Analyzer *const me, QEvt const *const e)
             snprintf(mag_label, sizeof(mag_label), "mag %d", me->sweep_number);
             log_XY(1, mag_label, me->freq_list[me->freq_index], dut_impedance.magnitude);
             char phase_label[16] = {0};
-            snprintf(phase_label, sizeof(phase_label), "mag %d", me->sweep_number);
+            snprintf(phase_label, sizeof(phase_label), "phase %d", me->sweep_number);
             log_XY(2, phase_label, me->freq_list[me->freq_index], dut_impedance.phase);
 
             me->freq_index++;
