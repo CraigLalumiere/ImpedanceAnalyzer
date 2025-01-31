@@ -108,7 +108,6 @@ typedef struct
 ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
 DMA_HandleTypeDef hdma_adc1;
-DMA_HandleTypeDef hdma_adc2;
 
 DAC_HandleTypeDef hdac1;
 DMA_HandleTypeDef hdma_dac1_ch1;
@@ -117,7 +116,6 @@ UART_HandleTypeDef hlpuart1;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim8;
-DMA_HandleTypeDef hdma_tim1_up;
 
 /* USER CODE BEGIN PV */
 
@@ -754,15 +752,6 @@ static void MX_DMA_Init(void)
     /* DMA1_Channel2_IRQn interrupt configuration */
     HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 1, 0);
     HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
-    /* DMA1_Channel3_IRQn interrupt configuration */
-    HAL_NVIC_SetPriority(DMA1_Channel3_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(DMA1_Channel3_IRQn);
-    /* DMA1_Channel4_IRQn interrupt configuration */
-    HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 1, 0);
-    HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
-    /* DMAMUX_OVR_IRQn interrupt configuration */
-    HAL_NVIC_SetPriority(DMAMUX_OVR_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(DMAMUX_OVR_IRQn);
 }
 
 /**
