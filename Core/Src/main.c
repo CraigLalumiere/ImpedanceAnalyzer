@@ -58,6 +58,7 @@ typedef struct
     union
     {
         QEvt base_event;
+        FloatEvent_T float_event;
     } small_messages;
 } SmallMessageUnion_T;
 typedef struct
@@ -65,7 +66,6 @@ typedef struct
     union
     {
         QEvt someMultipleQEvt[4];
-        FloatEvent_T float_event;
         DebugForceFaultEvent_T fault_event;
     } medium_messages;
 } MediumMessageUnion_T;
@@ -74,7 +74,6 @@ typedef struct
     union
     {
         QEvt base_event;
-        FaultGeneratedEvent_T fault_event;
         PCCOMPrintEvent_T pc_com_print_evt;
         PCCOMCliDataEvent_T pc_com_cli_event;
         DrawPlotEvent_T plot_data_event;
@@ -245,7 +244,7 @@ int main(void)
     static QF_MPOOL_EL(MediumMessageUnion_T) mediumPoolSto[10];
     QF_poolInit(mediumPoolSto, sizeof(mediumPoolSto), sizeof(mediumPoolSto[0]));
 
-    static QF_MPOOL_EL(LongMessageUnion_T) longPoolSto[100];
+    static QF_MPOOL_EL(LongMessageUnion_T) longPoolSto[200];
     QF_poolInit(longPoolSto, sizeof(longPoolSto), sizeof(longPoolSto[0]));
 
     // initialize publish-subscribe
@@ -675,7 +674,7 @@ static void MX_TIM8_Init(void)
     htim8.Instance               = TIM8;
     htim8.Init.Prescaler         = 0;
     htim8.Init.CounterMode       = TIM_COUNTERMODE_UP;
-    htim8.Init.Period            = 13;
+    htim8.Init.Period            = 13; // 13
     htim8.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
     htim8.Init.RepetitionCounter = 5 - 1;
     htim8.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -759,7 +758,7 @@ static void MX_DMA_Init(void)
     HAL_NVIC_SetPriority(DMA1_Channel3_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(DMA1_Channel3_IRQn);
     /* DMA1_Channel4_IRQn interrupt configuration */
-    HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 0, 0);
+    HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 1, 0);
     HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
     /* DMAMUX_OVR_IRQn interrupt configuration */
     HAL_NVIC_SetPriority(DMAMUX_OVR_IRQn, 0, 0);

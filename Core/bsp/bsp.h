@@ -18,14 +18,16 @@
 
 typedef enum
 {
-    IMPEDANCE_100,
+    IMPEDANCE_MIN,
+    IMPEDANCE_100 = IMPEDANCE_MIN,
     IMPEDANCE_330,
     IMPEDANCE_1k,
     IMPEDANCE_3k3,
     IMPEDANCE_10k,
     IMPEDANCE_33k,
     IMPEDANCE_100k,
-    IMPEDANCE_330k
+    IMPEDANCE_330k,
+    IMPEDANCE_MAX = IMPEDANCE_330k
 } Source_Impedance_T;
 
 /**************************************************************************************************\
@@ -62,10 +64,11 @@ void BSP_debug_gpio_toggle(void);
  * @brief   Functions for waveform generation/capture
  **************************************************************************************************/
 
+void BSP_Set_DAC(uint16_t value);
 void BSP_Stop_ADC_DAC_DMA();
 void BSP_Setup_ADC_DAC_DMA(
-    uint16_t adc1_dma_buffer[],
-    uint16_t adc2_dma_buffer[],
+    int16_t adc1_dma_buffer[],
+    int16_t adc2_dma_buffer[],
     uint16_t adc_data_width,
     uint16_t dac_dma_buffer[],
     uint16_t dac_data_width,

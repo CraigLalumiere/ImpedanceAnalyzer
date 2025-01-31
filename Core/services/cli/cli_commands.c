@@ -27,6 +27,7 @@ static void on_do_q_assert(EmbeddedCli *cli, char *args, void *context);
 static void on_fault(EmbeddedCli *cli, char *args, void *context);
 static void on_cli_set_freq_range(EmbeddedCli *cli, char *args, void *context);
 static void on_cli_do_impedance_sweep(EmbeddedCli *cli, char *args, void *context);
+static void on_cli_set_impedance(EmbeddedCli *cli, char *args, void *context);
 
 static CliCommandBinding cli_cmd_list[] = {
     (CliCommandBinding) {
@@ -95,6 +96,15 @@ static CliCommandBinding cli_cmd_list[] = {
         true,                                                  // flag whether to tokenize arguments
         NULL,                     // optional pointer to any application context
         on_cli_do_impedance_sweep // binding function
+    },
+
+    (CliCommandBinding) {
+        "source-impedance",                                 // command name (spaces are not allowed)
+        "Set the source impedance of the signal generator", // Optional help for
+                                                            // a command
+        true,                                               // flag whether to tokenize arguments
+        NULL,                // optional pointer to any application context
+        on_cli_set_impedance // binding function
     },
 };
 
@@ -246,4 +256,40 @@ static void on_cli_set_freq_range(EmbeddedCli *cli, char *args, void *context)
 static void on_cli_do_impedance_sweep(EmbeddedCli *cli, char *args, void *context)
 {
     Analyzer_Begin_Impedance_Sweep();
+}
+
+#define HELP_SET_IMPEDANCE \
+    "\r\n\
+ Usage: source-impedance N\r\n\
+ \r\n\
+ N    [0, 7]\r\n\
+"
+
+static void on_cli_set_impedance(EmbeddedCli *cli, char *args, void *context)
+{
+    char print_buffer[CLI_PRINT_BUFFER_SIZE] = {0};
+    uint32_t arg_f_start;
+    uint32_t arg_f_end;
+    uint32_t arg_N;
+    char *arg_end;
+
+    if (embeddedCliGetTokenCount(args) != 1)
+    {
+        embeddedCliPrint(cli, HELP_SET_IMPEDANCE);
+        return;
+    }
+
+    const char *arg1 = embeddedCliGetToken(args, 1);
+
+    arg_N = strtol(arg1, &arg_end, 10);
+
+    if (arg_N > 7)
+    {
+        embeddedCliPrint(cli, HELP_SET_FREQ_RANGE);
+        return;
+    }
+
+    BSP_Set_Source_Impedance(arg_N);
+
+    embeddedCliPrint(cli, print_buffer);
 }

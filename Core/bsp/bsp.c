@@ -42,6 +42,7 @@ const Serial_IO_T s_bsp_serial_io_uart = {
 };
 
 extern UART_HandleTypeDef hlpuart1; // defined in main.c by cubeMX
+extern TIM_HandleTypeDef htim1;     // defined in main.c by cubeMX
 extern DAC_HandleTypeDef hdac1;     // defined in main.c by cubeMX
 extern ADC_HandleTypeDef hadc1;     // defined in main.c by cubeMX
 extern ADC_HandleTypeDef hadc2;     // defined in main.c by cubeMX
@@ -184,6 +185,12 @@ void BSP_terminate(int16_t result)
  * @brief   Functions for waveform generation/capture
  **************************************************************************************************/
 
+void BSP_Set_DAC(uint16_t value)
+{
+    HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
+    HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, value);
+}
+
 void BSP_Stop_ADC_DAC_DMA()
 {
     HAL_StatusTypeDef retval;
@@ -198,8 +205,8 @@ void BSP_Stop_ADC_DAC_DMA()
     Q_ASSERT(retval == HAL_OK);
 }
 void BSP_Setup_ADC_DAC_DMA(
-    uint16_t adc1_dma_buffer[],
-    uint16_t adc2_dma_buffer[],
+    int16_t adc1_dma_buffer[],
+    int16_t adc2_dma_buffer[],
     uint16_t adc_data_width,
     uint16_t dac_dma_buffer[],
     uint16_t dac_data_width,
@@ -227,6 +234,7 @@ void BSP_Setup_ADC_DAC_DMA(
 
 void BSP_Start_Waveform_Timer()
 {
+    __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_CC2);
     TIM1->CNT = 0x00; // begin timer
 }
 
@@ -240,48 +248,56 @@ void BSP_Set_Source_Impedance(Source_Impedance_T impedance)
     switch (impedance)
     {
         case IMPEDANCE_100: {
+            PC_COM_print("Set impedance to 100 ohm");
             HAL_GPIO_WritePin(GS0_GPIO_Port, GS0_Pin, 0);
             HAL_GPIO_WritePin(GS1_GPIO_Port, GS1_Pin, 0);
             HAL_GPIO_WritePin(GS2_GPIO_Port, GS2_Pin, 0);
             break;
         }
         case IMPEDANCE_330: {
+            PC_COM_print("Set impedance to 330 ohm");
             HAL_GPIO_WritePin(GS0_GPIO_Port, GS0_Pin, 1);
             HAL_GPIO_WritePin(GS1_GPIO_Port, GS1_Pin, 0);
             HAL_GPIO_WritePin(GS2_GPIO_Port, GS2_Pin, 0);
             break;
         }
         case IMPEDANCE_1k: {
+            PC_COM_print("Set impedance to 1k ohm");
             HAL_GPIO_WritePin(GS0_GPIO_Port, GS0_Pin, 0);
             HAL_GPIO_WritePin(GS1_GPIO_Port, GS1_Pin, 1);
             HAL_GPIO_WritePin(GS2_GPIO_Port, GS2_Pin, 0);
             break;
         }
         case IMPEDANCE_3k3: {
+            PC_COM_print("Set impedance to 3.3k ohm");
             HAL_GPIO_WritePin(GS0_GPIO_Port, GS0_Pin, 1);
             HAL_GPIO_WritePin(GS1_GPIO_Port, GS1_Pin, 1);
             HAL_GPIO_WritePin(GS2_GPIO_Port, GS2_Pin, 0);
             break;
         }
         case IMPEDANCE_10k: {
+            PC_COM_print("Set impedance to 10k ohm");
             HAL_GPIO_WritePin(GS0_GPIO_Port, GS0_Pin, 0);
             HAL_GPIO_WritePin(GS1_GPIO_Port, GS1_Pin, 0);
             HAL_GPIO_WritePin(GS2_GPIO_Port, GS2_Pin, 1);
             break;
         }
         case IMPEDANCE_33k: {
+            PC_COM_print("Set impedance to 33k ohm");
             HAL_GPIO_WritePin(GS0_GPIO_Port, GS0_Pin, 1);
             HAL_GPIO_WritePin(GS1_GPIO_Port, GS1_Pin, 0);
             HAL_GPIO_WritePin(GS2_GPIO_Port, GS2_Pin, 1);
             break;
         }
         case IMPEDANCE_100k: {
+            PC_COM_print("Set impedance to 100k ohm");
             HAL_GPIO_WritePin(GS0_GPIO_Port, GS0_Pin, 0);
             HAL_GPIO_WritePin(GS1_GPIO_Port, GS1_Pin, 1);
             HAL_GPIO_WritePin(GS2_GPIO_Port, GS2_Pin, 1);
             break;
         }
         case IMPEDANCE_330k: {
+            PC_COM_print("Set impedance to 330k ohm");
             HAL_GPIO_WritePin(GS0_GPIO_Port, GS0_Pin, 1);
             HAL_GPIO_WritePin(GS1_GPIO_Port, GS1_Pin, 1);
             HAL_GPIO_WritePin(GS2_GPIO_Port, GS2_Pin, 1);

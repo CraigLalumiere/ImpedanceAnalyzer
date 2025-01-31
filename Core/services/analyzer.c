@@ -5,6 +5,7 @@
 #include "qpc.h" // QP/C real-time embedded framework
 #include "safe_strncpy.h"
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 
 Q_DEFINE_THIS_MODULE("analyzer")
@@ -24,8 +25,9 @@ Q_DEFINE_THIS_MODULE("analyzer")
 
 #define NUM_PERIODS 10 // (minimum) number of sinusoid waveforms to generate on DAC
 
-#define MINIMUM_VOLTAGE_ACROSS_LOAD_RESISTOR 50
-#define MAXIMUM_VOLTAGE_ACROSS_LOAD_RESISTOR 100
+// With 8 bit ADC, maximum reading is 0 to 256, to sinusoid amplitude is 128
+#define MINIMUM_VOLTAGE_ACROSS_LOAD_RESISTOR 128 / 3
+#define MAXIMUM_VOLTAGE_ACROSS_LOAD_RESISTOR 128 * 2 / 3
 
 #define max(a, b)           \
     ({                      \
@@ -75,6 +77,10 @@ typedef struct
 
     uint16_t dac_dma_data_len;
     uint16_t adc_dma_data_len;
+
+    bool is_first_cycle;
+
+    uint16_t sweep_number;
 } Analyzer;
 
 typedef struct
@@ -85,6 +91,8 @@ typedef struct
     uint32_t freq_end;
     uint32_t num_freq_points;
 } SetFreqRangeEvent_T;
+
+float32_t impedances[8] = {100, 330, 1000, 3300, 10000, 33000, 100000, 330000};
 
 /**************************************************************************************************\
 * Private prototypes
@@ -102,6 +110,7 @@ static void InitFrequenciesToSweep();
 static void GenerateSinusoid(uint32_t frequency);
 static MagPhase_T ADC_FourierAnalysis(int16_t *data, uint16_t data_len);
 
+static void log_XY(uint8_t plot_number, const char *data_label, uint32_t x, float32_t y);
 static void log_data(uint8_t plot_number, const char *data_label, float32_t data_point);
 static void log_data_block(
     uint8_t plot_number, const char *data_label, float32_t *data_points, int16_t data_len);
@@ -127,13 +136,17 @@ void Analyzer_ctor(void)
     memset(me->adc1_dma_buffer, 0, ADC_DMA_BUFFER_MAX_SIZE * sizeof(me->adc1_dma_buffer[0]));
     memset(me->adc2_dma_buffer, 0, ADC_DMA_BUFFER_MAX_SIZE * sizeof(me->adc2_dma_buffer[0]));
 
-    me->freq_start      = 10000;
-    me->freq_end        = 200000;
+    me->freq_start      = 100000;
+    me->freq_end        = 400000;
     me->num_freq_points = 100;
 
     me->source_impedance = IMPEDANCE_10k;
 
-    BSP_Set_Source_Impedance(me->source_impedance);
+    me->is_first_cycle = true;
+
+    me->sweep_number = 0;
+
+    // BSP_Set_DAC(OUTPUT_MID);
 
     InitFrequenciesToSweep();
 }
@@ -168,6 +181,12 @@ QState initial(Analyzer *const me, void const *const par)
     Q_UNUSED_PAR(par);
 
     QTimeEvt_armX(&me->timeEvt, BSP_TICKS_PER_SEC / 2U, BSP_TICKS_PER_SEC / 2U);
+
+    // Initialize the DAC to the 'mid' level
+    me->dac_dma_buffer[0] = OUTPUT_MID;
+    BSP_Setup_ADC_DAC_DMA(
+        me->adc1_dma_buffer, me->adc2_dma_buffer, me->adc_dma_data_len, me->dac_dma_buffer, 1, 2);
+    BSP_Start_Waveform_Timer(10);
 
     return Q_TRAN(&top);
 }
@@ -242,8 +261,8 @@ QState running(Analyzer *const me, QEvt const *const e)
             break;
         }
         case Q_ENTRY_SIG: {
-            me->freq_index = 0; // start at the beginning of the sweep
-            status         = Q_HANDLED();
+            // me->freq_index = 0; // start at the beginning of the sweep
+            status = Q_HANDLED();
             break;
         }
         case Q_EXIT_SIG: {
@@ -264,6 +283,11 @@ QState begin_sinusoid(Analyzer *const me, QEvt const *const e)
     switch (e->sig)
     {
         case Q_ENTRY_SIG: {
+            char print_buffer[PC_COM_EVENT_MAX_MSG_LENGTH] = {0};
+            snprintf(print_buffer, sizeof(print_buffer), "%d Hz", me->freq_list[me->freq_index]);
+            PC_COM_print(print_buffer);
+
+            BSP_Set_Source_Impedance(me->source_impedance);
             BSP_Stop_ADC_DAC_DMA();
             GenerateSinusoid(me->freq_list[me->freq_index]);
             uint16_t dac_total_clock_periods = max(
@@ -283,21 +307,14 @@ QState begin_sinusoid(Analyzer *const me, QEvt const *const e)
             status = Q_HANDLED();
             break;
         }
-        case POSTED_WAVEFORM_CAPTURE_COMPLETE_SIG: {
-            // Voltage across source impedance is ADC2-ADC1
-
-            // Change ADC1 in place to be the difference of the two measurements, which is the
-            // voltage across the source resistor
-            for (int i = 0; i < me->adc_dma_data_len; i++)
+        case TIMEOUT_SIG: {
+            // case POSTED_WAVEFORM_CAPTURE_COMPLETE_SIG: {
+            if (me->is_first_cycle)
             {
-                me->adc1_dma_buffer[i] = me->adc2_dma_buffer[i] - me->adc1_dma_buffer[i];
+                me->is_first_cycle = false;
+                status             = Q_HANDLED();
+                break;
             }
-            MagPhase_T source_resistor = ADC_FourierAnalysis(
-                me->adc1_dma_buffer, me->adc_dma_data_len);
-            MagPhase_T source = ADC_FourierAnalysis(me->adc2_dma_buffer, me->adc_dma_data_len);
-
-            log_data(1, "Vsr", source_resistor.magnitude);
-            log_data(2, "Vsr", source_resistor.phase);
 
             static float32_t adc1_data_float[512];
             static float32_t adc2_data_float[512];
@@ -308,10 +325,64 @@ QState begin_sinusoid(Analyzer *const me, QEvt const *const e)
                 adc2_data_float[i] = (float32_t) me->adc2_dma_buffer[i];
             }
 
-            log_data_block(0, "ADC1", adc1_data_float, me->adc_dma_data_len);
-            log_data_block(0, "ADC2", adc2_data_float, me->adc_dma_data_len);
+            log_data_block(0, "delta", adc1_data_float, me->adc_dma_data_len);
+            log_data_block(0, "DAC", adc2_data_float, me->adc_dma_data_len);
+
+            // Voltage across source impedance is ADC2-ADC1
+
+            // Change ADC1 in place to be the difference of the two measurements, which is the
+            // voltage across the source resistor
+            for (int i = 0; i < me->adc_dma_data_len; i++)
+            {
+                me->adc1_dma_buffer[i] = me->adc2_dma_buffer[i] - me->adc1_dma_buffer[i];
+            }
+            MagPhase_T resistor_voltage = ADC_FourierAnalysis(
+                me->adc1_dma_buffer, me->adc_dma_data_len);
+
+            MagPhase_T applied_voltage = ADC_FourierAnalysis(
+                me->adc2_dma_buffer, me->adc_dma_data_len);
+
+            // // if the source resistor voltage is too small, impedance should be increased
+            // if (resistor_voltage.magnitude < MINIMUM_VOLTAGE_ACROSS_LOAD_RESISTOR &&
+            //     me->source_impedance < IMPEDANCE_MAX)
+            // {
+            //     me->source_impedance++;
+            //     status = Q_TRAN(&begin_sinusoid);
+            // }
+            // // if the source resistor voltage is too great, impedance should be decreased
+            // else if (
+            //     resistor_voltage.magnitude > MAXIMUM_VOLTAGE_ACROSS_LOAD_RESISTOR &&
+            //     me->source_impedance > IMPEDANCE_MIN)
+            // {
+            //     me->source_impedance--;
+            //     status = Q_TRAN(&begin_sinusoid);
+            // }
+            // else
+            // {
+            MagPhase_T current;
+            current.magnitude = resistor_voltage.magnitude / impedances[me->source_impedance];
+            current.phase     = resistor_voltage.phase;
+
+            MagPhase_T dut_impedance;
+            dut_impedance.magnitude = applied_voltage.magnitude / current.magnitude;
+            dut_impedance.phase     = applied_voltage.phase - current.phase;
+
+            char mag_label[16] = {0};
+            snprintf(mag_label, sizeof(mag_label), "mag %d", me->sweep_number);
+            log_XY(1, mag_label, me->freq_list[me->freq_index], dut_impedance.magnitude);
+            char phase_label[16] = {0};
+            snprintf(phase_label, sizeof(phase_label), "mag %d", me->sweep_number);
+            log_XY(2, phase_label, me->freq_list[me->freq_index], dut_impedance.phase);
+
+            me->freq_index++;
+            if (me->freq_index == me->num_freq_points)
+            {
+                me->freq_index = 0;
+                me->sweep_number++;
+            }
 
             status = Q_TRAN(&standby);
+            // }
             break;
         }
         default: {
@@ -354,20 +425,38 @@ static uint32_t PeriodToFrequency(uint32_t period)
 /**
  ***************************************************************************************************
  *
- * @brief   Populate array freq_list with logarithmically spaced frequencies between the min and max
+ * @brief   Populate array freq_list with logarithmically spaced frequencies between the min and
+ *max
  *
  **************************************************************************************************/
 static void InitFrequenciesToSweep()
 {
     Analyzer *const me     = &Analyzer_inst;
     double freq_separation = pow(me->freq_end / me->freq_start, 1.0 / me->num_freq_points);
-    for (int i = 0; i < me->num_freq_points; i++)
+    uint32_t lastPer       = 0xFFFFFF;
+    // distribute frequency points logarithmically
+    int i;
+    for (i = 0; i < me->num_freq_points; i++)
     {
         uint32_t thisFreq = me->freq_start * pow(freq_separation, i);
         Q_ASSERT(thisFreq >= FREQ_MIN);
         Q_ASSERT(thisFreq <= FREQ_MAX);
-        me->freq_list[i] = thisFreq;
+        uint32_t thisPer = PeriodToFrequency(thisFreq);
+        if (thisPer == lastPer)
+            break;
+        me->freq_list[i] = PeriodToFrequency(thisPer);
+
+        lastPer = thisPer;
     }
+
+    do
+    {
+        me->freq_list[i++] = PeriodToFrequency(--lastPer);
+    } while (PeriodToFrequency(lastPer) < me->freq_end);
+
+    me->num_freq_points = i;
+
+    me->freq_index = 0; // start at the beginning
 }
 
 /**
@@ -436,20 +525,20 @@ static MagPhase_T ADC_FourierAnalysis(int16_t *data, uint16_t data_len)
         mean += data[i];
     }
     mean /= data_len;
-    int32_t inPhase      = 0;
-    int32_t quadrature   = 0;
-    uint32_t mean_square = 0; // the square of RMS
+    int32_t inPhase_sum      = 0;
+    int32_t quadrature_sum   = 0;
+    uint32_t mean_square_sum = 0; // the square of RMS
     for (int i = 0; i < data_len; i++)
     {
-        inPhase += data[i] * me->sine_buffer[i];
-        quadrature += data[i] * me->cosine_buffer[i];
-        mean_square += (data[i] - mean) * (data[i] - mean);
+        inPhase_sum += data[i] * me->sine_buffer[i];
+        quadrature_sum += data[i] * me->cosine_buffer[i];
+        mean_square_sum += (data[i] - mean) * (data[i] - mean);
     }
-    inPhase /= SINUSOID_AMP * data_len / 2;
-    quadrature /= SINUSOID_AMP * data_len / 2;
-    mean_square /= data_len / 2;
+    float32_t inPhase                = (float32_t) inPhase_sum / SINUSOID_AMP / data_len * 2;
+    float32_t quadrature             = (float32_t) quadrature_sum / SINUSOID_AMP / data_len * 2;
+    float32_t mean_square            = (float32_t) mean_square_sum / data_len * 2;
     result.magnitude                 = sqrt(inPhase * inPhase + quadrature * quadrature);
-    result.phase                     = atan2(quadrature, inPhase) * 180 / pi;
+    result.phase                     = atan2(quadrature, inPhase) * 180.0 / pi;
     result.total_harmonic_distortion = sqrt(mean_square - result.magnitude * result.magnitude) /
         result.magnitude;
 
@@ -465,6 +554,17 @@ static MagPhase_T ADC_FourierAnalysis(int16_t *data, uint16_t data_len)
     //     amplitude *= amp_cal_list[curr_freq_index];
     //     angle += phase_cal_list[curr_freq_index];
     // }
+}
+
+static void log_XY(uint8_t plot_number, const char *data_label, uint32_t x, float32_t y)
+{
+    AddDataToPlotEvent_T *event = Q_NEW(AddDataToPlotEvent_T, PUBSUB_ADD_DATA_TO_PLOT_SIG);
+    event->milliseconds         = x;
+    event->plot_number          = plot_number;
+    safe_strncpy(event->data_label, data_label, sizeof(event->data_label));
+    event->data_point = y;
+
+    QACTIVE_PUBLISH(&event->super, &me->super);
 }
 
 static void log_data(const uint8_t plot_number, const char *data_label, const float32_t data_point)

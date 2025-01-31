@@ -362,7 +362,8 @@ static QState active(PC_COM *const me, QEvt const *const e)
 
             safe_strncpy(message.data_label, event->data_label, sizeof(message.data_label));
             message.plot_number = event->plot_number;
-            Q_ASSERT(event->data_len * sizeof(event->data_points[0]) < sizeof(message.data_points));
+            Q_ASSERT(
+                event->data_len * sizeof(event->data_points[0]) <= sizeof(message.data_points));
             memcpy(
                 message.data_points,
                 event->data_points,
