@@ -3,6 +3,7 @@ import pyqtgraph as pg
 import numpy as np
 from messages.AddToPlot_pb2 import AddToPlot
 from messages.DrawPlot_pb2 import DrawPlot
+import random
 
 
 
@@ -14,6 +15,9 @@ class PlotManager:
         self.plot_data = []
 
         self.plot_win.setBackground(QtGui.QColor('#FFFFFF'))
+
+        
+        self.colours = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
 
 
     def update_data(self, msg):
@@ -27,8 +31,9 @@ class PlotManager:
             data_label = msg.data_label
             # check if we've not seen this label before
             if not data_label in self.plot_data[plot_number]:
-                colours = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
-                thisColour = colours[len(self.plot_data[plot_number])]
+                if (len(self.plot_data[plot_number]) >= len(self.colours)):
+                    self.colours.append((random.random()*256, random.random()*256, random.random()*256))
+                thisColour = self.colours[len(self.plot_data[plot_number])]
                 thisCurve = self.plots[plot_number].plot([],
                                                         [],
                                                         pen=thisColour,
