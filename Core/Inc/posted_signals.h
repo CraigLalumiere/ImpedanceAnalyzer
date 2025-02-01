@@ -1,6 +1,7 @@
 #ifndef POSTED_SIGNALS_H_
 #define POSTED_SIGNALS_H_
 
+#include "bsp.h"
 #include "pubsub_signals.h"
 #include "qp.h"
 
@@ -15,6 +16,7 @@ enum PostedSignals
     POSTED_PC_COM_CLI_DATA_SIG,
     POSTED_FORCE_FAULT_SIG,
     POSTED_WAVEFORM_CAPTURE_COMPLETE_SIG,
+    POSTED_SET_SOURCE_IMPEDANCE_SIG,
     POSTED_MAX_SIG
 };
 
@@ -34,5 +36,11 @@ typedef struct
     QEvt super;
     uint32_t desiredFault;
 } DebugForceFaultEvent_T;
+
+typedef struct
+{
+    QEvt super;
+    Source_Impedance_T impedance;
+} SetSourceImpedanceEvent_T;
 
 #endif // POSTED_SIGNALS_H_

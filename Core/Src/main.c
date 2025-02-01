@@ -67,6 +67,7 @@ typedef struct
     {
         QEvt someMultipleQEvt[4];
         DebugForceFaultEvent_T fault_event;
+        AddDataToPlotEvent_T addToPlotEvent;
     } medium_messages;
 } MediumMessageUnion_T;
 typedef struct
@@ -117,6 +118,8 @@ UART_HandleTypeDef hlpuart1;
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim8;
 
+extern bool sinusoid_running;
+
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -140,8 +143,12 @@ static void MX_ADC2_Init(void);
 
 inline void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
-    static QEvt const event = QEVT_INITIALIZER(POSTED_WAVEFORM_CAPTURE_COMPLETE_SIG);
-    QACTIVE_POST(AO_Analyzer, &event, NULL);
+    if (sinusoid_running)
+    {
+        sinusoid_running        = false;
+        static QEvt const event = QEVT_INITIALIZER(POSTED_WAVEFORM_CAPTURE_COMPLETE_SIG);
+        QACTIVE_POST(AO_Analyzer, &event, NULL);
+    }
 }
 inline void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc)
 {
@@ -238,13 +245,13 @@ int main(void)
     BSP_Init();
 
     // initialize event pools
-    static QF_MPOOL_EL(SmallMessageUnion_T) smlPoolSto[100];
+    static QF_MPOOL_EL(SmallMessageUnion_T) smlPoolSto[10];
     QF_poolInit(smlPoolSto, sizeof(smlPoolSto), sizeof(smlPoolSto[0]));
 
-    static QF_MPOOL_EL(MediumMessageUnion_T) mediumPoolSto[10];
+    static QF_MPOOL_EL(MediumMessageUnion_T) mediumPoolSto[100];
     QF_poolInit(mediumPoolSto, sizeof(mediumPoolSto), sizeof(mediumPoolSto[0]));
 
-    static QF_MPOOL_EL(LongMessageUnion_T) longPoolSto[200];
+    static QF_MPOOL_EL(LongMessageUnion_T) longPoolSto[100];
     QF_poolInit(longPoolSto, sizeof(longPoolSto), sizeof(longPoolSto[0]));
 
     // initialize publish-subscribe
@@ -275,7 +282,7 @@ int main(void)
     //     0U,                  // stack size [bytes] (not used in QK)
     //     (void *) 0);         // no initialization param
 
-    static QEvt const *app_pc_com_QueueSto[20];
+    static QEvt const *app_pc_com_QueueSto[600];
     PC_COM_ctor(BSP_Get_Serial_IO_Interface_UART());
     QACTIVE_START(
         AO_PC_COM,
@@ -286,7 +293,7 @@ int main(void)
         0U,                         // stack size [bytes] (not used in QK)
         (void *) 0);                // no initialization param
 
-    static QEvt const *analyzer_QueueSto[20];
+    static QEvt const *analyzer_QueueSto[10];
     Analyzer_ctor();
     QACTIVE_START(
         AO_Analyzer,

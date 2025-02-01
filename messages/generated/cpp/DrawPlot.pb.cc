@@ -44,13 +44,15 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_DrawPlot_2eproto::offsets[] PR
   ~0u,  // no _weak_field_map_
   PROTOBUF_FIELD_OFFSET(::DrawPlot, plot_number_),
   PROTOBUF_FIELD_OFFSET(::DrawPlot, data_label_),
-  PROTOBUF_FIELD_OFFSET(::DrawPlot, data_points_),
+  PROTOBUF_FIELD_OFFSET(::DrawPlot, data_x_),
+  PROTOBUF_FIELD_OFFSET(::DrawPlot, data_y_),
   1,
   0,
   ~0u,
+  ~0u,
 };
 static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
-  { 0, 8, sizeof(::DrawPlot)},
+  { 0, 9, sizeof(::DrawPlot)},
 };
 
 static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
@@ -58,9 +60,9 @@ static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] =
 };
 
 const char descriptor_table_protodef_DrawPlot_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
-  "\n\016DrawPlot.proto\"L\n\010DrawPlot\022\023\n\013plot_num"
-  "ber\030\001 \002(\r\022\022\n\ndata_label\030\002 \002(\t\022\027\n\013data_po"
-  "ints\030\003 \003(\002B\002\020\001"
+  "\n\016DrawPlot.proto\"[\n\010DrawPlot\022\023\n\013plot_num"
+  "ber\030\001 \002(\r\022\022\n\ndata_label\030\002 \002(\t\022\022\n\006data_x\030"
+  "\003 \003(\rB\002\020\001\022\022\n\006data_y\030\004 \003(\002B\002\020\001"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_DrawPlot_2eproto_deps[1] = {
 };
@@ -69,7 +71,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_Dra
 };
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_DrawPlot_2eproto_once;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_DrawPlot_2eproto = {
-  false, false, descriptor_table_protodef_DrawPlot_2eproto, "DrawPlot.proto", 94,
+  false, false, descriptor_table_protodef_DrawPlot_2eproto, "DrawPlot.proto", 109,
   &descriptor_table_DrawPlot_2eproto_once, descriptor_table_DrawPlot_2eproto_sccs, descriptor_table_DrawPlot_2eproto_deps, 1, 0,
   schemas, file_default_instances, TableStruct_DrawPlot_2eproto::offsets,
   file_level_metadata_DrawPlot_2eproto, 1, file_level_enum_descriptors_DrawPlot_2eproto, file_level_service_descriptors_DrawPlot_2eproto,
@@ -98,7 +100,8 @@ class DrawPlot::_Internal {
 
 DrawPlot::DrawPlot(::PROTOBUF_NAMESPACE_ID::Arena* arena)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena),
-  data_points_(arena) {
+  data_x_(arena),
+  data_y_(arena) {
   SharedCtor();
   RegisterArenaDtor(arena);
   // @@protoc_insertion_point(arena_constructor:DrawPlot)
@@ -106,7 +109,8 @@ DrawPlot::DrawPlot(::PROTOBUF_NAMESPACE_ID::Arena* arena)
 DrawPlot::DrawPlot(const DrawPlot& from)
   : ::PROTOBUF_NAMESPACE_ID::Message(),
       _has_bits_(from._has_bits_),
-      data_points_(from.data_points_) {
+      data_x_(from.data_x_),
+      data_y_(from.data_y_) {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   data_label_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   if (from._internal_has_data_label()) {
@@ -155,7 +159,8 @@ void DrawPlot::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  data_points_.Clear();
+  data_x_.Clear();
+  data_y_.Clear();
   cached_has_bits = _has_bits_[0];
   if (cached_has_bits & 0x00000001u) {
     data_label_.ClearNonDefaultToEmpty();
@@ -193,13 +198,23 @@ const char* DrawPlot::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::i
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
-      // repeated float data_points = 3 [packed = true];
+      // repeated uint32 data_x = 3 [packed = true];
       case 3:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 26)) {
-          ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedFloatParser(_internal_mutable_data_points(), ptr, ctx);
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedUInt32Parser(_internal_mutable_data_x(), ptr, ctx);
           CHK_(ptr);
-        } else if (static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 29) {
-          _internal_add_data_points(::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<float>(ptr));
+        } else if (static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 24) {
+          _internal_add_data_x(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr));
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // repeated float data_y = 4 [packed = true];
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 34)) {
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedFloatParser(_internal_mutable_data_y(), ptr, ctx);
+          CHK_(ptr);
+        } else if (static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 37) {
+          _internal_add_data_y(::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<float>(ptr));
           ptr += sizeof(float);
         } else goto handle_unusual;
         continue;
@@ -249,9 +264,18 @@ failure:
         2, this->_internal_data_label(), target);
   }
 
-  // repeated float data_points = 3 [packed = true];
-  if (this->_internal_data_points_size() > 0) {
-    target = stream->WriteFixedPacked(3, _internal_data_points(), target);
+  // repeated uint32 data_x = 3 [packed = true];
+  {
+    int byte_size = _data_x_cached_byte_size_.load(std::memory_order_relaxed);
+    if (byte_size > 0) {
+      target = stream->WriteUInt32Packed(
+          3, _internal_data_x(), byte_size, target);
+    }
+  }
+
+  // repeated float data_y = 4 [packed = true];
+  if (this->_internal_data_y_size() > 0) {
+    target = stream->WriteFixedPacked(4, _internal_data_y(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -304,9 +328,24 @@ size_t DrawPlot::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // repeated float data_points = 3 [packed = true];
+  // repeated uint32 data_x = 3 [packed = true];
   {
-    unsigned int count = static_cast<unsigned int>(this->_internal_data_points_size());
+    size_t data_size = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      UInt32Size(this->data_x_);
+    if (data_size > 0) {
+      total_size += 1 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
+            static_cast<::PROTOBUF_NAMESPACE_ID::int32>(data_size));
+    }
+    int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(data_size);
+    _data_x_cached_byte_size_.store(cached_size,
+                                    std::memory_order_relaxed);
+    total_size += data_size;
+  }
+
+  // repeated float data_y = 4 [packed = true];
+  {
+    unsigned int count = static_cast<unsigned int>(this->_internal_data_y_size());
     size_t data_size = 4UL * count;
     if (data_size > 0) {
       total_size += 1 +
@@ -314,7 +353,7 @@ size_t DrawPlot::ByteSizeLong() const {
             static_cast<::PROTOBUF_NAMESPACE_ID::int32>(data_size));
     }
     int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(data_size);
-    _data_points_cached_byte_size_.store(cached_size,
+    _data_y_cached_byte_size_.store(cached_size,
                                     std::memory_order_relaxed);
     total_size += data_size;
   }
@@ -350,7 +389,8 @@ void DrawPlot::MergeFrom(const DrawPlot& from) {
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  data_points_.MergeFrom(from.data_points_);
+  data_x_.MergeFrom(from.data_x_);
+  data_y_.MergeFrom(from.data_y_);
   cached_has_bits = from._has_bits_[0];
   if (cached_has_bits & 0x00000003u) {
     if (cached_has_bits & 0x00000001u) {
@@ -386,7 +426,8 @@ void DrawPlot::InternalSwap(DrawPlot* other) {
   using std::swap;
   _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
   swap(_has_bits_[0], other->_has_bits_[0]);
-  data_points_.InternalSwap(&other->data_points_);
+  data_x_.InternalSwap(&other->data_x_);
+  data_y_.InternalSwap(&other->data_y_);
   data_label_.Swap(&other->data_label_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
   swap(plot_number_, other->plot_number_);
 }

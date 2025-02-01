@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto2',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x0e\x44rawPlot.proto\"L\n\x08\x44rawPlot\x12\x13\n\x0bplot_number\x18\x01 \x02(\r\x12\x12\n\ndata_label\x18\x02 \x02(\t\x12\x17\n\x0b\x64\x61ta_points\x18\x03 \x03(\x02\x42\x02\x10\x01'
+  serialized_pb=b'\n\x0e\x44rawPlot.proto\"[\n\x08\x44rawPlot\x12\x13\n\x0bplot_number\x18\x01 \x02(\r\x12\x12\n\ndata_label\x18\x02 \x02(\t\x12\x12\n\x06\x64\x61ta_x\x18\x03 \x03(\rB\x02\x10\x01\x12\x12\n\x06\x64\x61ta_y\x18\x04 \x03(\x02\x42\x02\x10\x01'
 )
 
 
@@ -48,8 +48,15 @@ _DRAWPLOT = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
-      name='data_points', full_name='DrawPlot.data_points', index=2,
-      number=3, type=2, cpp_type=6, label=3,
+      name='data_x', full_name='DrawPlot.data_x', index=2,
+      number=3, type=13, cpp_type=3, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=b'\020\001', file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='data_y', full_name='DrawPlot.data_y', index=3,
+      number=4, type=2, cpp_type=6, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -67,7 +74,7 @@ _DRAWPLOT = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=18,
-  serialized_end=94,
+  serialized_end=109,
 )
 
 DESCRIPTOR.message_types_by_name['DrawPlot'] = _DRAWPLOT
@@ -81,5 +88,6 @@ DrawPlot = _reflection.GeneratedProtocolMessageType('DrawPlot', (_message.Messag
 _sym_db.RegisterMessage(DrawPlot)
 
 
-_DRAWPLOT.fields_by_name['data_points']._options = None
+_DRAWPLOT.fields_by_name['data_x']._options = None
+_DRAWPLOT.fields_by_name['data_y']._options = None
 # @@protoc_insertion_point(module_scope)

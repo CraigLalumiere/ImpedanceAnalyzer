@@ -54,7 +54,8 @@ typedef struct
     QEvt super;
     uint8_t plot_number;
     char data_label[16];
-    float32_t *data_points;
+    uint32_t *data_x;
+    float32_t *data_y;
     uint16_t data_len;
 } DrawPlotEvent_T;
 

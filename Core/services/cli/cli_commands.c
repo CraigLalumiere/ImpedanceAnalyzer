@@ -27,6 +27,7 @@ static void on_do_q_assert(EmbeddedCli *cli, char *args, void *context);
 static void on_fault(EmbeddedCli *cli, char *args, void *context);
 static void on_cli_set_freq_range(EmbeddedCli *cli, char *args, void *context);
 static void on_cli_do_impedance_sweep(EmbeddedCli *cli, char *args, void *context);
+static void on_cli_do_offset_cal(EmbeddedCli *cli, char *args, void *context);
 static void on_cli_set_impedance(EmbeddedCli *cli, char *args, void *context);
 
 static CliCommandBinding cli_cmd_list[] = {
@@ -96,6 +97,15 @@ static CliCommandBinding cli_cmd_list[] = {
         true,                                                  // flag whether to tokenize arguments
         NULL,                     // optional pointer to any application context
         on_cli_do_impedance_sweep // binding function
+    },
+
+    (CliCommandBinding) {
+        "offset-calibration", // command name (spaces are not allowed)
+        "Perform offset calibration with open-circuit load", // Optional help for
+                                                             // a command
+        true,                                                // flag whether to tokenize arguments
+        NULL,                // optional pointer to any application context
+        on_cli_do_offset_cal // binding function
     },
 
     (CliCommandBinding) {
@@ -258,6 +268,11 @@ static void on_cli_do_impedance_sweep(EmbeddedCli *cli, char *args, void *contex
     Analyzer_Begin_Impedance_Sweep();
 }
 
+static void on_cli_do_offset_cal(EmbeddedCli *cli, char *args, void *context)
+{
+    Analyzer_Begin_Offset_Calibration();
+}
+
 #define HELP_SET_IMPEDANCE \
     "\r\n\
  Usage: source-impedance N\r\n\
@@ -289,7 +304,10 @@ static void on_cli_set_impedance(EmbeddedCli *cli, char *args, void *context)
         return;
     }
 
-    BSP_Set_Source_Impedance(arg_N);
+    SetSourceImpedanceEvent_T *event = Q_NEW(
+        SetSourceImpedanceEvent_T, POSTED_SET_SOURCE_IMPEDANCE_SIG);
+    event->impedance = arg_N;
+    QACTIVE_POST(AO_Analyzer, &event->super, NULL);
 
     embeddedCliPrint(cli, print_buffer);
 }

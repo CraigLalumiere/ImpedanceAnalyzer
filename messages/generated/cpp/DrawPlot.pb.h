@@ -183,31 +183,54 @@ class DrawPlot PROTOBUF_FINAL :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kDataPointsFieldNumber = 3,
+    kDataXFieldNumber = 3,
+    kDataYFieldNumber = 4,
     kDataLabelFieldNumber = 2,
     kPlotNumberFieldNumber = 1,
   };
-  // repeated float data_points = 3 [packed = true];
-  int data_points_size() const;
+  // repeated uint32 data_x = 3 [packed = true];
+  int data_x_size() const;
   private:
-  int _internal_data_points_size() const;
+  int _internal_data_x_size() const;
   public:
-  void clear_data_points();
+  void clear_data_x();
   private:
-  float _internal_data_points(int index) const;
-  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >&
-      _internal_data_points() const;
-  void _internal_add_data_points(float value);
-  ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >*
-      _internal_mutable_data_points();
+  ::PROTOBUF_NAMESPACE_ID::uint32 _internal_data_x(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+      _internal_data_x() const;
+  void _internal_add_data_x(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+      _internal_mutable_data_x();
   public:
-  float data_points(int index) const;
-  void set_data_points(int index, float value);
-  void add_data_points(float value);
+  ::PROTOBUF_NAMESPACE_ID::uint32 data_x(int index) const;
+  void set_data_x(int index, ::PROTOBUF_NAMESPACE_ID::uint32 value);
+  void add_data_x(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+      data_x() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+      mutable_data_x();
+
+  // repeated float data_y = 4 [packed = true];
+  int data_y_size() const;
+  private:
+  int _internal_data_y_size() const;
+  public:
+  void clear_data_y();
+  private:
+  float _internal_data_y(int index) const;
   const ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >&
-      data_points() const;
+      _internal_data_y() const;
+  void _internal_add_data_y(float value);
   ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >*
-      mutable_data_points();
+      _internal_mutable_data_y();
+  public:
+  float data_y(int index) const;
+  void set_data_y(int index, float value);
+  void add_data_y(float value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >&
+      data_y() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >*
+      mutable_data_y();
 
   // required string data_label = 2;
   bool has_data_label() const;
@@ -263,8 +286,10 @@ class DrawPlot PROTOBUF_FINAL :
   typedef void DestructorSkippable_;
   ::PROTOBUF_NAMESPACE_ID::internal::HasBits<1> _has_bits_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
-  ::PROTOBUF_NAMESPACE_ID::RepeatedField< float > data_points_;
-  mutable std::atomic<int> _data_points_cached_byte_size_;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 > data_x_;
+  mutable std::atomic<int> _data_x_cached_byte_size_;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< float > data_y_;
+  mutable std::atomic<int> _data_y_cached_byte_size_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr data_label_;
   ::PROTOBUF_NAMESPACE_ID::uint32 plot_number_;
   friend struct ::TableStruct_DrawPlot_2eproto;
@@ -401,51 +426,98 @@ inline void DrawPlot::unsafe_arena_set_allocated_data_label(
   // @@protoc_insertion_point(field_unsafe_arena_set_allocated:DrawPlot.data_label)
 }
 
-// repeated float data_points = 3 [packed = true];
-inline int DrawPlot::_internal_data_points_size() const {
-  return data_points_.size();
+// repeated uint32 data_x = 3 [packed = true];
+inline int DrawPlot::_internal_data_x_size() const {
+  return data_x_.size();
 }
-inline int DrawPlot::data_points_size() const {
-  return _internal_data_points_size();
+inline int DrawPlot::data_x_size() const {
+  return _internal_data_x_size();
 }
-inline void DrawPlot::clear_data_points() {
-  data_points_.Clear();
+inline void DrawPlot::clear_data_x() {
+  data_x_.Clear();
 }
-inline float DrawPlot::_internal_data_points(int index) const {
-  return data_points_.Get(index);
+inline ::PROTOBUF_NAMESPACE_ID::uint32 DrawPlot::_internal_data_x(int index) const {
+  return data_x_.Get(index);
 }
-inline float DrawPlot::data_points(int index) const {
-  // @@protoc_insertion_point(field_get:DrawPlot.data_points)
-  return _internal_data_points(index);
+inline ::PROTOBUF_NAMESPACE_ID::uint32 DrawPlot::data_x(int index) const {
+  // @@protoc_insertion_point(field_get:DrawPlot.data_x)
+  return _internal_data_x(index);
 }
-inline void DrawPlot::set_data_points(int index, float value) {
-  data_points_.Set(index, value);
-  // @@protoc_insertion_point(field_set:DrawPlot.data_points)
+inline void DrawPlot::set_data_x(int index, ::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  data_x_.Set(index, value);
+  // @@protoc_insertion_point(field_set:DrawPlot.data_x)
 }
-inline void DrawPlot::_internal_add_data_points(float value) {
-  data_points_.Add(value);
+inline void DrawPlot::_internal_add_data_x(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  data_x_.Add(value);
 }
-inline void DrawPlot::add_data_points(float value) {
-  _internal_add_data_points(value);
-  // @@protoc_insertion_point(field_add:DrawPlot.data_points)
+inline void DrawPlot::add_data_x(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  _internal_add_data_x(value);
+  // @@protoc_insertion_point(field_add:DrawPlot.data_x)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+DrawPlot::_internal_data_x() const {
+  return data_x_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+DrawPlot::data_x() const {
+  // @@protoc_insertion_point(field_list:DrawPlot.data_x)
+  return _internal_data_x();
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+DrawPlot::_internal_mutable_data_x() {
+  return &data_x_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+DrawPlot::mutable_data_x() {
+  // @@protoc_insertion_point(field_mutable_list:DrawPlot.data_x)
+  return _internal_mutable_data_x();
+}
+
+// repeated float data_y = 4 [packed = true];
+inline int DrawPlot::_internal_data_y_size() const {
+  return data_y_.size();
+}
+inline int DrawPlot::data_y_size() const {
+  return _internal_data_y_size();
+}
+inline void DrawPlot::clear_data_y() {
+  data_y_.Clear();
+}
+inline float DrawPlot::_internal_data_y(int index) const {
+  return data_y_.Get(index);
+}
+inline float DrawPlot::data_y(int index) const {
+  // @@protoc_insertion_point(field_get:DrawPlot.data_y)
+  return _internal_data_y(index);
+}
+inline void DrawPlot::set_data_y(int index, float value) {
+  data_y_.Set(index, value);
+  // @@protoc_insertion_point(field_set:DrawPlot.data_y)
+}
+inline void DrawPlot::_internal_add_data_y(float value) {
+  data_y_.Add(value);
+}
+inline void DrawPlot::add_data_y(float value) {
+  _internal_add_data_y(value);
+  // @@protoc_insertion_point(field_add:DrawPlot.data_y)
 }
 inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >&
-DrawPlot::_internal_data_points() const {
-  return data_points_;
+DrawPlot::_internal_data_y() const {
+  return data_y_;
 }
 inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >&
-DrawPlot::data_points() const {
-  // @@protoc_insertion_point(field_list:DrawPlot.data_points)
-  return _internal_data_points();
+DrawPlot::data_y() const {
+  // @@protoc_insertion_point(field_list:DrawPlot.data_y)
+  return _internal_data_y();
 }
 inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >*
-DrawPlot::_internal_mutable_data_points() {
-  return &data_points_;
+DrawPlot::_internal_mutable_data_y() {
+  return &data_y_;
 }
 inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >*
-DrawPlot::mutable_data_points() {
-  // @@protoc_insertion_point(field_mutable_list:DrawPlot.data_points)
-  return _internal_mutable_data_points();
+DrawPlot::mutable_data_y() {
+  // @@protoc_insertion_point(field_mutable_list:DrawPlot.data_y)
+  return _internal_mutable_data_y();
 }
 
 #ifdef __GNUC__

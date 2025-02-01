@@ -1,2 +1,3 @@
 DrawPlot.data_label max_size:16
-DrawPlot.data_points max_count:512
+DrawPlot.data_x max_count:512
+DrawPlot.data_y max_count:512

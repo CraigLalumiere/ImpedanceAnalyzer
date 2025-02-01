@@ -4,5 +4,6 @@ syntax = "proto2";
 message DrawPlot {
   required uint32 plot_number = 1;
   required string data_label = 2;
-  repeated float data_points = 3 [packed=true];
+  repeated uint32 data_x = 3 [packed=true];
+  repeated float data_y = 4 [packed=true];
 }

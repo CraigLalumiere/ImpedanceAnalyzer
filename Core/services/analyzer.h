@@ -30,5 +30,6 @@ extern QActive *const AO_Analyzer; // opaque pointer
 
 void Analyzer_Set_Freq_Range(uint32_t freq_start, uint32_t freq_end, uint32_t num_freq_points);
 void Analyzer_Begin_Impedance_Sweep();
+void Analyzer_Begin_Offset_Calibration();
 
 #endif // ANALYZER_H_
