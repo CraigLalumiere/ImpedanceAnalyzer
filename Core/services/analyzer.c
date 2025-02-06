@@ -15,7 +15,7 @@ Q_DEFINE_THIS_MODULE("analyzer")
 \**************************************************************************************************/
 
 #define ADC_DOWNSAMPLING_RATE   5 // ADC clock runs 3x slower than DAC clock
-#define ADC_DMA_BUFFER_MAX_SIZE 512
+#define ADC_DMA_BUFFER_MAX_SIZE 1024
 #define DAC_DMA_BUFFER_MAX_SIZE ADC_DOWNSAMPLING_RATE *ADC_DMA_BUFFER_MAX_SIZE
 
 #define NUM_ADC_SWEEPS 3
@@ -47,6 +47,8 @@ enum AnalyzerSignals
     SET_FREQ_RANGE_SIG = PRIVATE_SIGNAL_ANALYZER_START,
     BEGIN_FREQ_SWEEP_SIG,
     OFFSET_CALIBRATION_SIG,
+    GAIN_CALIBRATION_SIG,
+    SUBSTATE_FREQ_SWEEP_COMPLETE_SIG,
     TIMEOUT_SIG
 };
 
@@ -60,6 +62,9 @@ typedef struct
 typedef struct
 {
     QActive super; // inherit QActive
+
+    // submachine state memory
+    QStateHandler substate_super_state;
 
     QTimeEvt timeEvt; // private time event generator
 
@@ -85,7 +90,8 @@ typedef struct
     MagPhase_T voltage_measurements[FREQ_POINTS_MAX];
     MagPhase_T current_measurements[FREQ_POINTS_MAX];
 
-    float32_t current_offset_cal[FREQ_POINTS_MAX];
+    MagPhase_T current_offset_cal[FREQ_POINTS_MAX];
+    MagPhase_T gain_offset_cal[FREQ_POINTS_MAX];
 } Analyzer;
 
 typedef struct
@@ -107,13 +113,21 @@ static QState initial(Analyzer *const me, void const *const par);
 static QState top(Analyzer *const me, QEvt const *const e);
 static QState standby(Analyzer *const me, QEvt const *const e);
 static QState running(Analyzer *const me, QEvt const *const e);
-static QState begin_sinusoid(Analyzer *const me, QEvt const *const e);
+static QState impedance_sweep(Analyzer *const me, QEvt const *const e);
 static QState offset_calibration(Analyzer *const me, QEvt const *const e);
+static QState gain_calibration(Analyzer *const me, QEvt const *const e);
+
+static QState substate_impedance_sweep(Analyzer *const me, QEvt const *const e);
+
+// Substate machine
+static QState substate_do_frequency_sweep(QStateHandler super_state);
 
 static uint32_t PeriodToFrequency(uint32_t period);
 static void InitFrequenciesToSweep();
 static void GenerateSinusoid(uint32_t frequency);
 static MagPhase_T ADC_FourierAnalysis(int16_t *data, uint16_t data_len);
+static void ApplyCurrentOffsetCalibration();
+static void ApplyGainOffsetCalibration();
 
 static void log_XY(uint8_t plot_number, const char *data_label, uint32_t x, float32_t y);
 static void log_data(uint8_t plot_number, const char *data_label, float32_t data_point);
@@ -143,6 +157,7 @@ void Analyzer_ctor(void)
     QTimeEvt_ctorX(&me->timeEvt, &me->super, TIMEOUT_SIG, 0U);
 
     memset(me->adc_dma_buffer, 0, ADC_DMA_BUFFER_MAX_SIZE * sizeof(me->adc_dma_buffer[0]));
+    memset(me->current_offset_cal, 0, FREQ_POINTS_MAX * sizeof(me->current_offset_cal[0]));
 
     me->freq_start      = 10000;
     me->freq_end        = 40000;
@@ -182,6 +197,13 @@ void Analyzer_Begin_Offset_Calibration()
 {
     Analyzer *const me      = &Analyzer_inst;
     static QEvt const event = QEVT_INITIALIZER(OFFSET_CALIBRATION_SIG);
+    QACTIVE_POST(&(me->super), &event, NULL);
+}
+
+void Analyzer_Begin_Gain_Calibration()
+{
+    Analyzer *const me      = &Analyzer_inst;
+    static QEvt const event = QEVT_INITIALIZER(GAIN_CALIBRATION_SIG);
     QACTIVE_POST(&(me->super), &event, NULL);
 }
 
@@ -249,10 +271,10 @@ QState standby(Analyzer *const me, QEvt const *const e)
         case SET_FREQ_RANGE_SIG: {
             const SetFreqRangeEvent_T *event = Q_EVT_CAST(SetFreqRangeEvent_T);
             Q_ASSERT(event->freq_start < event->freq_end);
-            Q_ASSERT(event->freq_start < FREQ_MIN);
-            Q_ASSERT(event->freq_end < FREQ_MAX);
-            Q_ASSERT(event->num_freq_points > FREQ_POINTS_MIN);
-            Q_ASSERT(event->num_freq_points < FREQ_POINTS_MAX);
+            Q_ASSERT(event->freq_start >= FREQ_MIN);
+            Q_ASSERT(event->freq_end <= FREQ_MAX);
+            Q_ASSERT(event->num_freq_points >= FREQ_POINTS_MIN);
+            Q_ASSERT(event->num_freq_points <= FREQ_POINTS_MAX);
 
             me->freq_start      = event->freq_start;
             me->freq_end        = event->freq_end;
@@ -265,11 +287,15 @@ QState standby(Analyzer *const me, QEvt const *const e)
         }
         // case TIMEOUT_SIG:
         case BEGIN_FREQ_SWEEP_SIG: {
-            status = Q_TRAN(&running);
+            status = Q_TRAN(&impedance_sweep);
             break;
         }
         case OFFSET_CALIBRATION_SIG: {
             status = Q_TRAN(&offset_calibration);
+            break;
+        }
+        case GAIN_CALIBRATION_SIG: {
+            status = Q_TRAN(&gain_calibration);
             break;
         }
         default: {
@@ -285,27 +311,7 @@ QState running(Analyzer *const me, QEvt const *const e)
     QState status;
     switch (e->sig)
     {
-        case Q_INIT_SIG: {
-            status = Q_TRAN(&begin_sinusoid);
-            break;
-        }
         case Q_ENTRY_SIG: {
-            me->freq_index = 0; // start at the beginning of the sweep
-            status         = Q_HANDLED();
-            break;
-        }
-        case Q_EXIT_SIG: {
-            static float32_t dataV[512];
-            static float32_t dataI[512];
-            for (int i = 0; i < me->num_freq_points; i++)
-            {
-                dataV[i] = (float32_t) (me->voltage_measurements[i].magnitude);
-                dataI[i] = (float32_t) (me->current_measurements[i].magnitude);
-            }
-
-            log_data_block(0, "V", me->freq_list, dataV, me->num_freq_points);
-            log_data_block(1, "I", me->freq_list, dataI, me->num_freq_points);
-
             status = Q_HANDLED();
             break;
         }
@@ -317,7 +323,125 @@ QState running(Analyzer *const me, QEvt const *const e)
     return status;
 }
 //............................................................................
-QState begin_sinusoid(Analyzer *const me, QEvt const *const e)
+QState impedance_sweep(Analyzer *const me, QEvt const *const e)
+{
+    QState status;
+    switch (e->sig)
+    {
+        case Q_INIT_SIG: {
+            status = substate_do_frequency_sweep((QStateHandler) &impedance_sweep);
+            break;
+        }
+        case SUBSTATE_FREQ_SWEEP_COMPLETE_SIG: {
+            ApplyCurrentOffsetCalibration();
+            ApplyGainOffsetCalibration();
+
+            MagPhase_T dut_impedance[FREQ_POINTS_MAX];
+
+            for (int i = 0; i < me->num_freq_points; i++)
+            {
+                dut_impedance[i].magnitude = me->voltage_measurements[i].magnitude /
+                    me->current_measurements[i].magnitude;
+                dut_impedance[i].phase = me->voltage_measurements[i].phase -
+                    me->current_measurements[i].phase;
+            }
+
+            // static float32_t dataV[512];
+            // static float32_t dataI[512];
+            static float32_t dataZmag[512];
+            static float32_t dataZphase[512];
+            for (int i = 0; i < me->num_freq_points; i++)
+            {
+                // dataV[i] = (float32_t) (me->voltage_measurements[i].magnitude);
+                // dataI[i] = (float32_t) (me->current_measurements[i].magnitude);
+                dataZmag[i]   = (float32_t) dut_impedance[i].magnitude;
+                dataZphase[i] = (float32_t) dut_impedance[i].phase;
+            }
+
+            // log_data_block(0, "V", me->freq_list, dataV, me->num_freq_points);
+            // log_data_block(1, "I", me->freq_list, dataI, me->num_freq_points);
+            log_data_block(0, "Z mag", me->freq_list, dataZmag, me->num_freq_points);
+            log_data_block(1, "Z phase", me->freq_list, dataZphase, me->num_freq_points);
+
+            status = Q_TRAN(&standby);
+            break;
+        }
+        default: {
+            status = Q_SUPER(&running);
+            break;
+        }
+    }
+    return status;
+}
+//............................................................................
+QState offset_calibration(Analyzer *const me, QEvt const *const e)
+{
+    QState status;
+    switch (e->sig)
+    {
+        case Q_INIT_SIG: {
+            status = substate_do_frequency_sweep((QStateHandler) &offset_calibration);
+            break;
+        }
+        case SUBSTATE_FREQ_SWEEP_COMPLETE_SIG: {
+            for (int i = 0; i < me->num_freq_points; i++)
+            {
+                me->current_offset_cal[i].magnitude = -me->current_measurements[i].magnitude;
+                me->current_offset_cal[i].phase     = -me->current_measurements[i].phase;
+            }
+
+            PC_COM_print("Offset calibration complete");
+
+            status = Q_TRAN(&standby);
+            break;
+        }
+
+        default: {
+            status = Q_SUPER(&running);
+            break;
+        }
+    }
+    return status;
+}
+//............................................................................
+QState gain_calibration(Analyzer *const me, QEvt const *const e)
+{
+    QState status;
+    switch (e->sig)
+    {
+        case Q_INIT_SIG: {
+            status = substate_do_frequency_sweep((QStateHandler) &gain_calibration);
+            break;
+        }
+        case SUBSTATE_FREQ_SWEEP_COMPLETE_SIG: {
+            ApplyCurrentOffsetCalibration();
+
+            for (int i = 0; i < me->num_freq_points; i++)
+            {
+                MagPhase_T thisImpedance;
+                thisImpedance.magnitude = me->voltage_measurements[i].magnitude /
+                    me->current_measurements[i].magnitude;
+                thisImpedance.phase = me->voltage_measurements[i].phase -
+                    me->current_measurements[i].phase;
+                me->gain_offset_cal[i].magnitude = 10000.0 / thisImpedance.magnitude;
+                me->gain_offset_cal[i].phase     = -thisImpedance.phase;
+            }
+
+            PC_COM_print("Gain calibration complete");
+
+            status = Q_TRAN(&standby);
+            break;
+        }
+
+        default: {
+            status = Q_SUPER(&running);
+            break;
+        }
+    }
+    return status;
+}
+//............................................................................
+QState substate_impedance_sweep(Analyzer *const me, QEvt const *const e)
 {
     QState status;
     switch (e->sig)
@@ -391,10 +515,6 @@ QState begin_sinusoid(Analyzer *const me, QEvt const *const e)
             me->voltage_measurements[me->freq_index] = applied_voltage;
             me->current_measurements[me->freq_index] = current;
 
-            MagPhase_T dut_impedance;
-            dut_impedance.magnitude = applied_voltage.magnitude / current.magnitude;
-            dut_impedance.phase     = applied_voltage.phase - current.phase;
-
             // char mag_label[16] = {0};
             // snprintf(mag_label, sizeof(mag_label), "mag %d", me->sweep_number);
             // log_XY(1, mag_label, me->freq_list[me->freq_index], dut_impedance.magnitude);
@@ -418,36 +538,37 @@ QState begin_sinusoid(Analyzer *const me, QEvt const *const e)
 
             me->freq_index++;
             if (me->freq_index == me->num_freq_points)
-                status = Q_TRAN(&standby);
+            {
+                static QEvt const event = QEVT_INITIALIZER(SUBSTATE_FREQ_SWEEP_COMPLETE_SIG);
+                QACTIVE_POST(&(me->super), &event, NULL);
+                status = Q_HANDLED();
+            }
             else
-                status = Q_TRAN(&running);
+                status = Q_TRAN(&substate_impedance_sweep);
             // }
             break;
         }
         default: {
-            status = Q_SUPER(&running);
+            status = Q_SUPER(me->substate_super_state);
             break;
         }
     }
     return status;
 }
-//............................................................................
-QState offset_calibration(Analyzer *const me, QEvt const *const e)
-{
-    QState status;
-    switch (e->sig)
-    {
-        case Q_ENTRY_SIG: {
-            status = Q_HANDLED();
-            break;
-        }
 
-        default: {
-            status = Q_SUPER(&running);
-            break;
-        }
-    }
-    return status;
+/**
+ ***************************************************************************************************
+ *
+ * @brief   Substate machine
+ *
+ **************************************************************************************************/
+
+static QState substate_do_frequency_sweep(QStateHandler super_state)
+{
+    Analyzer *const me       = &Analyzer_inst;
+    me->freq_index           = 0; // start at the beginning of the sweep
+    me->substate_super_state = super_state;
+    return Q_TRAN(&substate_impedance_sweep);
 }
 
 /**
@@ -594,6 +715,26 @@ static MagPhase_T ADC_FourierAnalysis(int16_t *data, uint16_t data_len)
     //     amplitude *= amp_cal_list[curr_freq_index];
     //     angle += phase_cal_list[curr_freq_index];
     // }
+}
+
+static void ApplyCurrentOffsetCalibration()
+{
+    Analyzer *const me = &Analyzer_inst;
+    for (int i = 0; i < me->num_freq_points; i++)
+    {
+        me->current_measurements[i].magnitude += me->current_offset_cal[i].magnitude;
+        me->current_measurements[i].phase += me->current_offset_cal[i].phase;
+    }
+}
+
+static void ApplyGainOffsetCalibration()
+{
+    Analyzer *const me = &Analyzer_inst;
+    for (int i = 0; i < me->num_freq_points; i++)
+    {
+        me->current_measurements[i].magnitude /= me->gain_offset_cal[i].magnitude;
+        me->current_measurements[i].phase -= me->gain_offset_cal[i].phase;
+    }
 }
 
 static void log_XY(uint8_t plot_number, const char *data_label, uint32_t x, float32_t y)

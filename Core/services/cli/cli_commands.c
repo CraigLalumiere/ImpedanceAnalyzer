@@ -28,6 +28,7 @@ static void on_fault(EmbeddedCli *cli, char *args, void *context);
 static void on_cli_set_freq_range(EmbeddedCli *cli, char *args, void *context);
 static void on_cli_do_impedance_sweep(EmbeddedCli *cli, char *args, void *context);
 static void on_cli_do_offset_cal(EmbeddedCli *cli, char *args, void *context);
+static void on_cli_do_gain_cal(EmbeddedCli *cli, char *args, void *context);
 static void on_cli_set_impedance(EmbeddedCli *cli, char *args, void *context);
 
 static CliCommandBinding cli_cmd_list[] = {
@@ -106,6 +107,15 @@ static CliCommandBinding cli_cmd_list[] = {
         true,                                                // flag whether to tokenize arguments
         NULL,                // optional pointer to any application context
         on_cli_do_offset_cal // binding function
+    },
+
+    (CliCommandBinding) {
+        "gain-calibration",                       // command name (spaces are not allowed)
+        "Perform gain calibration with 10k load", // Optional help for
+                                                  // a command
+        true,                                     // flag whether to tokenize arguments
+        NULL,                                     // optional pointer to any application context
+        on_cli_do_gain_cal                        // binding function
     },
 
     (CliCommandBinding) {
@@ -221,7 +231,7 @@ static void on_cli_set_freq_range(EmbeddedCli *cli, char *args, void *context)
 
     const char *arg1 = embeddedCliGetToken(args, 1);
     const char *arg2 = embeddedCliGetToken(args, 2);
-    const char *arg3 = embeddedCliGetToken(args, 2);
+    const char *arg3 = embeddedCliGetToken(args, 3);
 
     arg_f_start = strtoul(arg1, &arg_end, 10);
     arg_f_end   = strtol(arg2, &arg_end, 10);
@@ -271,6 +281,11 @@ static void on_cli_do_impedance_sweep(EmbeddedCli *cli, char *args, void *contex
 static void on_cli_do_offset_cal(EmbeddedCli *cli, char *args, void *context)
 {
     Analyzer_Begin_Offset_Calibration();
+}
+
+static void on_cli_do_gain_cal(EmbeddedCli *cli, char *args, void *context)
+{
+    Analyzer_Begin_Gain_Calibration();
 }
 
 #define HELP_SET_IMPEDANCE \
