@@ -15,7 +15,7 @@ Q_DEFINE_THIS_MODULE("analyzer")
 \**************************************************************************************************/
 
 #define ADC_DOWNSAMPLING_RATE   5 // ADC clock runs 3x slower than DAC clock
-#define ADC_DMA_BUFFER_MAX_SIZE 1024
+#define ADC_DMA_BUFFER_MAX_SIZE 512
 #define DAC_DMA_BUFFER_MAX_SIZE ADC_DOWNSAMPLING_RATE *ADC_DMA_BUFFER_MAX_SIZE
 
 #define NUM_ADC_SWEEPS 3
@@ -70,11 +70,12 @@ typedef struct
 
     uint32_t freq_start;
     uint32_t freq_end;
+    float32_t freq_spacing; // logarithmic spacing between frequencies
     uint16_t num_freq_points;
 
     Source_Impedance_T source_impedance;
 
-    uint32_t freq_list[FREQ_POINTS_MAX];
+    float32_t freq_list[FREQ_POINTS_MAX];
     uint16_t freq_index;
 
     uint16_t dac_dma_buffer[DAC_DMA_BUFFER_MAX_SIZE];
@@ -122,9 +123,9 @@ static QState substate_impedance_sweep(Analyzer *const me, QEvt const *const e);
 // Substate machine
 static QState substate_do_frequency_sweep(QStateHandler super_state);
 
-static uint32_t PeriodToFrequency(uint32_t period);
+static float32_t PeriodToFrequency(float32_t period);
 static void InitFrequenciesToSweep();
-static void GenerateSinusoid(uint32_t frequency);
+static void GenerateSinusoid(float32_t frequency);
 static MagPhase_T ADC_FourierAnalysis(int16_t *data, uint16_t data_len);
 static void ApplyCurrentOffsetCalibration();
 static void ApplyGainOffsetCalibration();
@@ -162,6 +163,7 @@ void Analyzer_ctor(void)
     me->freq_start      = 10000;
     me->freq_end        = 40000;
     me->num_freq_points = 100;
+    me->freq_spacing    = pow(me->freq_end / me->freq_start, 1.0 / me->num_freq_points);
 
     me->source_impedance = IMPEDANCE_10k;
     BSP_Set_Source_Impedance(me->source_impedance);
@@ -170,7 +172,7 @@ void Analyzer_ctor(void)
 
     // BSP_Set_DAC(OUTPUT_MID);
 
-    InitFrequenciesToSweep();
+    // InitFrequenciesToSweep();
 }
 
 void Analyzer_Set_Freq_Range(uint32_t freq_start, uint32_t freq_end, uint32_t num_freq_points)
@@ -279,8 +281,9 @@ QState standby(Analyzer *const me, QEvt const *const e)
             me->freq_start      = event->freq_start;
             me->freq_end        = event->freq_end;
             me->num_freq_points = event->num_freq_points;
+            me->freq_spacing    = pow(me->freq_end / me->freq_start, 1.0 / me->num_freq_points);
 
-            InitFrequenciesToSweep();
+            // InitFrequenciesToSweep();
 
             status = Q_HANDLED();
             break;
@@ -296,6 +299,22 @@ QState standby(Analyzer *const me, QEvt const *const e)
         }
         case GAIN_CALIBRATION_SIG: {
             status = Q_TRAN(&gain_calibration);
+            break;
+        }
+        case POSTED_DRAW_SINUSOID_SIG: {
+            GenerateSinusoid(Q_EVT_CAST(FloatEvent_T)->value);
+
+            static float32_t dataY[DAC_DMA_BUFFER_MAX_SIZE];
+            static uint32_t dataX[DAC_DMA_BUFFER_MAX_SIZE];
+            for (int i = 0; i < me->dac_dma_data_len; i++)
+            {
+                dataX[i] = i;
+                dataY[i] = (float32_t) me->dac_dma_buffer[i];
+            }
+
+            log_data_block(3, "sine", dataX, dataY, me->dac_dma_data_len);
+
+            status = Q_HANDLED();
             break;
         }
         default: {
@@ -348,20 +367,24 @@ QState impedance_sweep(Analyzer *const me, QEvt const *const e)
 
             // static float32_t dataV[512];
             // static float32_t dataI[512];
-            static float32_t dataZmag[512];
-            static float32_t dataZphase[512];
+            static float32_t dataZmag[FREQ_POINTS_MAX];
+            static float32_t dataZphase[FREQ_POINTS_MAX];
+            static uint32_t dataX[FREQ_POINTS_MAX];
             for (int i = 0; i < me->num_freq_points; i++)
             {
                 // dataV[i] = (float32_t) (me->voltage_measurements[i].magnitude);
                 // dataI[i] = (float32_t) (me->current_measurements[i].magnitude);
                 dataZmag[i]   = (float32_t) dut_impedance[i].magnitude;
                 dataZphase[i] = (float32_t) dut_impedance[i].phase;
+                dataX[i]      = me->freq_list[i];
             }
 
             // log_data_block(0, "V", me->freq_list, dataV, me->num_freq_points);
             // log_data_block(1, "I", me->freq_list, dataI, me->num_freq_points);
-            log_data_block(0, "Z mag", me->freq_list, dataZmag, me->num_freq_points);
-            log_data_block(1, "Z phase", me->freq_list, dataZphase, me->num_freq_points);
+            log_data_block(0, "Z mag", dataX, dataZmag, me->num_freq_points);
+            log_data_block(1, "Z phase", dataX, dataZphase, me->num_freq_points);
+
+            PC_COM_print("Impedance sweep complete");
 
             status = Q_TRAN(&standby);
             break;
@@ -536,15 +559,21 @@ QState substate_impedance_sweep(Analyzer *const me, QEvt const *const e)
             // log_data_block(0, "delta", delta_data_float, me->adc_dma_data_len);
             // log_data_block(0, "applied", applied_data_float, me->adc_dma_data_len);
 
-            me->freq_index++;
-            if (me->freq_index == me->num_freq_points)
+            if (me->freq_list[me->freq_index] >= me->freq_end ||
+                me->freq_index + 1 == FREQ_POINTS_MAX)
             {
+                me->num_freq_points     = me->freq_index + 1;
                 static QEvt const event = QEVT_INITIALIZER(SUBSTATE_FREQ_SWEEP_COMPLETE_SIG);
                 QACTIVE_POST(&(me->super), &event, NULL);
                 status = Q_HANDLED();
             }
             else
+            {
+                me->freq_index++;
+                me->freq_list[me->freq_index] = me->freq_list[me->freq_index - 1] *
+                    me->freq_spacing;
                 status = Q_TRAN(&substate_impedance_sweep);
+            }
             // }
             break;
         }
@@ -567,6 +596,7 @@ static QState substate_do_frequency_sweep(QStateHandler super_state)
 {
     Analyzer *const me       = &Analyzer_inst;
     me->freq_index           = 0; // start at the beginning of the sweep
+    me->freq_list[0]         = me->freq_start;
     me->substate_super_state = super_state;
     return Q_TRAN(&substate_impedance_sweep);
 }
@@ -578,9 +608,9 @@ static QState substate_do_frequency_sweep(QStateHandler super_state)
  *
  **************************************************************************************************/
 
-static uint32_t PeriodToFrequency(uint32_t period)
+static float32_t PeriodToFrequency(float32_t period)
 {
-    return 12000000ul / period / ADC_DOWNSAMPLING_RATE;
+    return 12000000.0 / period / ADC_DOWNSAMPLING_RATE;
 }
 
 /**
@@ -594,28 +624,28 @@ static void InitFrequenciesToSweep()
 {
     Analyzer *const me     = &Analyzer_inst;
     double freq_separation = pow(me->freq_end / me->freq_start, 1.0 / me->num_freq_points);
-    uint32_t lastPer       = 0xFFFFFF;
+    // uint32_t lastPer       = 0xFFFFFF;
     // distribute frequency points logarithmically
     int i;
     for (i = 0; i < me->num_freq_points; i++)
     {
-        uint32_t thisFreq = me->freq_start * pow(freq_separation, i);
-        Q_ASSERT(thisFreq >= FREQ_MIN);
-        Q_ASSERT(thisFreq <= FREQ_MAX);
-        uint32_t thisPer = PeriodToFrequency(thisFreq);
-        if (thisPer == lastPer)
-            break;
-        me->freq_list[i] = PeriodToFrequency(thisPer);
+        me->freq_list[i] = (float32_t) (me->freq_start) * pow(freq_separation, i);
+        Q_ASSERT(me->freq_list[i] >= FREQ_MIN);
+        Q_ASSERT(me->freq_list[i] <= FREQ_MAX);
+        // uint32_t thisPer = PeriodToFrequency(thisFreq);
+        // if (thisPer == lastPer)
+        //     break;
+        // me->freq_list[i] = PeriodToFrequency(thisPer);
 
-        lastPer = thisPer;
+        // lastPer = thisPer;
     }
 
-    do
-    {
-        me->freq_list[i++] = PeriodToFrequency(--lastPer);
-    } while (PeriodToFrequency(lastPer) < me->freq_end);
+    // do
+    // {
+    //     me->freq_list[i++] = PeriodToFrequency(--lastPer);
+    // } while (PeriodToFrequency(lastPer) < me->freq_end);
 
-    me->num_freq_points = i;
+    // me->num_freq_points = i;
 
     me->freq_index = 0; // start at the beginning
 }
@@ -626,20 +656,21 @@ static void InitFrequenciesToSweep()
  * @brief   Generate sinusoids in RAM of the appropriate frequency
  *
  **************************************************************************************************/
-static void GenerateSinusoid(uint32_t frequency)
+static void GenerateSinusoid(float32_t frequency)
 {
     Analyzer *const me = &Analyzer_inst;
 
-    uint32_t waveform_period = PeriodToFrequency(frequency);
-    Q_ASSERT(waveform_period > 0);
-    Q_ASSERT(waveform_period <= ADC_DMA_BUFFER_MAX_SIZE);
+    float32_t waveform_period_ideal = PeriodToFrequency(frequency);
+    Q_ASSERT(waveform_period_ideal > 0);
+    Q_ASSERT(waveform_period_ideal <= ADC_DMA_BUFFER_MAX_SIZE);
 
     // Calculate how many whole periods can fit in our buffer
-    uint8_t num_periods = ADC_DMA_BUFFER_MAX_SIZE / waveform_period;
+    uint8_t num_periods = ADC_DMA_BUFFER_MAX_SIZE / waveform_period_ideal;
 
-    me->adc_dma_data_len = waveform_period * num_periods;
+    me->adc_dma_data_len      = (uint16_t) (waveform_period_ideal * num_periods);
+    float32_t waveform_period = (float32_t) (me->adc_dma_data_len) / num_periods;
     Q_ASSERT(me->adc_dma_data_len <= ADC_DMA_BUFFER_MAX_SIZE);
-    me->dac_dma_data_len = waveform_period * ADC_DOWNSAMPLING_RATE;
+    me->dac_dma_data_len = me->adc_dma_data_len * ADC_DOWNSAMPLING_RATE;
     Q_ASSERT(me->dac_dma_data_len <= DAC_DMA_BUFFER_MAX_SIZE);
 
     for (uint16_t i = 0; i < me->dac_dma_data_len; i++)
@@ -650,13 +681,8 @@ static void GenerateSinusoid(uint32_t frequency)
         if (i % ADC_DOWNSAMPLING_RATE == 0)
         {
             double this_cos = cos(2 * pi * i / waveform_period / ADC_DOWNSAMPLING_RATE);
-            for (int j = 0; j < num_periods; j++)
-            {
-                me->sine_buffer[i / ADC_DOWNSAMPLING_RATE + j * waveform_period] = this_sin *
-                    SINUSOID_AMP;
-                me->cosine_buffer[i / ADC_DOWNSAMPLING_RATE + j * waveform_period] = this_cos *
-                    SINUSOID_AMP;
-            }
+            me->sine_buffer[i / ADC_DOWNSAMPLING_RATE]   = this_sin * SINUSOID_AMP;
+            me->cosine_buffer[i / ADC_DOWNSAMPLING_RATE] = this_cos * SINUSOID_AMP;
         }
     }
     // ensure that the final datapoint is exactly in the midpoint

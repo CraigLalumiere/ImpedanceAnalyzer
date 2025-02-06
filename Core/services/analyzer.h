@@ -9,7 +9,7 @@
 
 #define FREQ_MAX        500000
 #define FREQ_MIN        10000
-#define FREQ_POINTS_MAX 1024
+#define FREQ_POINTS_MAX 512
 #define FREQ_POINTS_MIN 2
 
 /**************************************************************************************************\

@@ -21,13 +21,13 @@ enum PubSubSignals
 typedef struct
 {
     QEvt super;
-    float num; // size of the buffer 'instructions', which should be >= actual size
+    float value;
 } FloatEvent_T;
 
 typedef struct
 {
     QEvt super;
-    int16_t num; // size of the buffer 'instructions', which should be >= actual size
+    int16_t value;
 } Int16Event_T;
 
 typedef struct

@@ -30,6 +30,7 @@ static void on_cli_do_impedance_sweep(EmbeddedCli *cli, char *args, void *contex
 static void on_cli_do_offset_cal(EmbeddedCli *cli, char *args, void *context);
 static void on_cli_do_gain_cal(EmbeddedCli *cli, char *args, void *context);
 static void on_cli_set_impedance(EmbeddedCli *cli, char *args, void *context);
+static void on_cli_draw_sinusoid(EmbeddedCli *cli, char *args, void *context);
 
 static CliCommandBinding cli_cmd_list[] = {
     (CliCommandBinding) {
@@ -125,6 +126,15 @@ static CliCommandBinding cli_cmd_list[] = {
         true,                                               // flag whether to tokenize arguments
         NULL,                // optional pointer to any application context
         on_cli_set_impedance // binding function
+    },
+
+    (CliCommandBinding) {
+        "draw-sinusoid",                // command name (spaces are not allowed)
+        "Generate and plot a sinusoid", // Optional help for
+                                        // a command
+        true,                           // flag whether to tokenize arguments
+        NULL,                           // optional pointer to any application context
+        on_cli_draw_sinusoid            // binding function
     },
 };
 
@@ -298,8 +308,6 @@ static void on_cli_do_gain_cal(EmbeddedCli *cli, char *args, void *context)
 static void on_cli_set_impedance(EmbeddedCli *cli, char *args, void *context)
 {
     char print_buffer[CLI_PRINT_BUFFER_SIZE] = {0};
-    uint32_t arg_f_start;
-    uint32_t arg_f_end;
     uint32_t arg_N;
     char *arg_end;
 
@@ -325,4 +333,33 @@ static void on_cli_set_impedance(EmbeddedCli *cli, char *args, void *context)
     QACTIVE_POST(AO_Analyzer, &event->super, NULL);
 
     embeddedCliPrint(cli, print_buffer);
+}
+
+#define HELP_DRAW_SINUSOID \
+    "\r\n\
+ Usage: draw-sinusoid F\r\n\
+ \r\n\
+ F    frequency\r\n\
+"
+
+static void on_cli_draw_sinusoid(EmbeddedCli *cli, char *args, void *context)
+{
+    float32_t arg_freq;
+    char *arg_end;
+
+    if (embeddedCliGetTokenCount(args) != 1)
+    {
+        embeddedCliPrint(cli, HELP_SET_IMPEDANCE);
+        return;
+    }
+
+    const char *arg1 = embeddedCliGetToken(args, 1);
+
+    arg_freq = strtof(arg1, &arg_end);
+
+    FloatEvent_T *event = Q_NEW(FloatEvent_T, POSTED_DRAW_SINUSOID_SIG);
+
+    event->value = arg_freq;
+
+    QACTIVE_POST(AO_Analyzer, (QEvt *) (event), NULL);
 }
