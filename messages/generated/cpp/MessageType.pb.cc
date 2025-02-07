@@ -22,9 +22,10 @@ static constexpr ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema* schemas = n
 static constexpr ::PROTOBUF_NAMESPACE_ID::Message* const* file_default_instances = nullptr;
 
 const char descriptor_table_protodef_MessageType_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
-  "\n\021MessageType.proto*J\n\013MessageType\022\r\n\tLO"
-  "G_PRINT\020\001\022\014\n\010CLI_DATA\020\002\022\017\n\013ADD_TO_PLOT\020\003"
-  "\022\r\n\tDRAW_PLOT\020\004"
+  "\n\021MessageType.proto*\203\001\n\013MessageType\022\r\n\tL"
+  "OG_PRINT\020\001\022\014\n\010CLI_DATA\020\002\022\017\n\013LOG_TO_PLOT\020"
+  "\003\022\022\n\016ADD_XY_TO_PLOT\020\004\022\r\n\tDRAW_PLOT\020\005\022\022\n\016"
+  "DRAW_BODE_PLOT\020\006\022\017\n\013CLEAR_PLOTS\020\007"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_MessageType_2eproto_deps[1] = {
 };
@@ -32,7 +33,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_Mes
 };
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_MessageType_2eproto_once;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_MessageType_2eproto = {
-  false, false, descriptor_table_protodef_MessageType_2eproto, "MessageType.proto", 95,
+  false, false, descriptor_table_protodef_MessageType_2eproto, "MessageType.proto", 153,
   &descriptor_table_MessageType_2eproto_once, descriptor_table_MessageType_2eproto_sccs, descriptor_table_MessageType_2eproto_deps, 0, 0,
   schemas, file_default_instances, TableStruct_MessageType_2eproto::offsets,
   file_level_metadata_MessageType_2eproto, 0, file_level_enum_descriptors_MessageType_2eproto, file_level_service_descriptors_MessageType_2eproto,
@@ -50,6 +51,9 @@ bool MessageType_IsValid(int value) {
     case 2:
     case 3:
     case 4:
+    case 5:
+    case 6:
+    case 7:
       return true;
     default:
       return false;

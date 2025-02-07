@@ -7,10 +7,11 @@
 * Public macros
 \**************************************************************************************************/
 
-#define FREQ_MAX        500000
-#define FREQ_MIN        10000
-#define FREQ_POINTS_MAX 512
-#define FREQ_POINTS_MIN 2
+#define ADC_DOWNSAMPLING_RATE 5 // ADC clock runs 3x slower than DAC clock
+#define FREQ_MAX              500000
+#define FREQ_MIN              (12000000.0 / 512 / ADC_DOWNSAMPLING_RATE)
+#define FREQ_POINTS_MAX       512
+#define FREQ_POINTS_MIN       2
 
 /**************************************************************************************************\
 * Public type definitions

@@ -67,8 +67,7 @@ typedef struct
     {
         QEvt someMultipleQEvt[4];
         DebugForceFaultEvent_T fault_event;
-        AddDataToPlotEvent_T addToPlotEvent;
-        DrawPlotEvent_T plot_data_event;
+        DrawBodePlotEvent_T plot_bode_plot_event;
     } medium_messages;
 } MediumMessageUnion_T;
 typedef struct

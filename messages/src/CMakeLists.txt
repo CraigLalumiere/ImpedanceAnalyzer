@@ -5,8 +5,11 @@ set(PROTO_FILES
         MessageType.proto
         LogPrint.proto
         CLIData.proto
-        AddToPlot.proto
+        LogToPlot.proto
+        AddXYToPlot.proto
         DrawPlot.proto
+        DrawBodePlot.proto
+        ClearPlots.proto
 )
 
 

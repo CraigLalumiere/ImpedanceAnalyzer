@@ -1,0 +1,8 @@
+syntax = "proto2";
+
+message AddXYToPlot {
+  required uint32 plot_number = 1;
+  required string data_label = 2;
+  required float data_x = 3;
+  required float data_y = 4;
+}

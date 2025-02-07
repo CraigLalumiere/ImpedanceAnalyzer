@@ -1,9 +1,12 @@
 #include "pc_com.h"
 #include "bsp.h"
-#include "c/AddToPlot.pb.h"
+#include "c/AddXYToPlot.pb.h"
 #include "c/CLIData.pb.h"
+#include "c/ClearPlots.pb.h"
+#include "c/DrawBodePlot.pb.h"
 #include "c/DrawPlot.pb.h"
 #include "c/LogPrint.pb.h"
+#include "c/LogToPlot.pb.h"
 #include "c/MessageType.pb.h"
 #include "cli_commands.h"
 #include "crc16.h"
@@ -34,20 +37,28 @@ enum PC_COM_Signals
 {
     SERIAL_DATA_AVAILABLE_SIG = PRIVATE_SIGNAL_PC_COM_START,
     CLI_PROCESS_TICK_SIG,
+    CLEAR_PLOTS_SIG,
+    LOG_TO_PLOT_SIG,
+    ADD_XY_TO_PLOT_SIG,
+    DRAW_PLOT_SIG,
+    DRAW_BODE_PLOT_SIG,
     TEST_SIG
 };
 
 typedef uint16_t Packet_CRC_T;
 typedef uint8_t Packet_Type_T;
 
-// encoded PB messages are variable length, so this union ensures allocation to git the largest
+// encoded PB messages are variable length, so this union ensures allocation to get the largest
 // encoded message
 typedef union
 {
     uint8_t LogPrint_max[LOGPRINT_PB_H_MAX_SIZE];
     uint8_t CLIData_max[CLIDATA_PB_H_MAX_SIZE];
-    uint8_t AddToPlot_max[ADDTOPLOT_PB_H_MAX_SIZE];
+    uint8_t LogToPlot_max[LOGTOPLOT_PB_H_MAX_SIZE];
+    uint8_t AddXYToPlot_max[ADDXYTOPLOT_PB_H_MAX_SIZE];
     uint8_t DrawPlot_max[DrawPlot_size];
+    uint8_t DrawBodePlot_max[DRAWBODEPLOT_PB_H_MAX_SIZE];
+    uint8_t ClearPlots_max[CLEARPLOTS_PB_H_MAX_SIZE];
 } TX_Message_Buffer_T;
 
 typedef union
@@ -183,6 +194,118 @@ void PC_COM_print(const char *msg)
     QACTIVE_POST(AO_PC_COM, (QEvt *) (event), AO_PC_COM);
 }
 
+/**
+ ***************************************************************************************************
+ *
+ * @brief   Clear all plots
+ *
+ **************************************************************************************************/
+
+void PC_COM_clear_plots()
+{
+    PC_COM *const me        = &pc_com_inst;
+    static QEvt const event = QEVT_INITIALIZER(CLEAR_PLOTS_SIG);
+    QACTIVE_POST(me, &event, me);
+}
+
+/**
+ ***************************************************************************************************
+ *
+ * @brief   Append X/Y datapoint to a plot
+ *
+ **************************************************************************************************/
+
+void PC_COM_add_datapoint_to_plot(
+    uint8_t plot_number, const char *data_label, float32_t x, float32_t y)
+{
+    AddDataToPlotEvent_T *event = Q_NEW(AddDataToPlotEvent_T, ADD_XY_TO_PLOT_SIG);
+    event->plot_number          = plot_number;
+    safe_strncpy(event->data_label, data_label, sizeof(event->data_label));
+    event->data_x = x;
+    event->data_y = y;
+
+    QACTIVE_POST(AO_PC_COM, (QEvt *) (event), AO_PC_COM);
+}
+
+/**
+ ***************************************************************************************************
+ *
+ * @brief   Add millisecond time-stamped datapoint to a plot
+ *
+ **************************************************************************************************/
+
+void PC_COM_log_data_to_plot(uint8_t plot_number, const char *data_label, float32_t y)
+{
+    AddDataToPlotEvent_T *event = Q_NEW(AddDataToPlotEvent_T, LOG_TO_PLOT_SIG);
+    event->plot_number          = plot_number;
+    safe_strncpy(event->data_label, data_label, sizeof(event->data_label));
+    event->milliseconds = BSP_Get_Milliseconds_Tick();
+    event->data_y       = y;
+
+    QACTIVE_POST(AO_PC_COM, (QEvt *) (event), AO_PC_COM);
+}
+
+/**
+ ***************************************************************************************************
+ *
+ * @brief   Draw (or wipe and redraw) up to 512 datapoints to a plot
+ *
+ **************************************************************************************************/
+
+void PC_COM_draw_plot(
+    uint8_t plot_number,
+    const char *data_label,
+    uint32_t *data_x,
+    float32_t *data_y,
+    int16_t data_len)
+{
+    DrawPlotEvent_T *event = Q_NEW(DrawPlotEvent_T, DRAW_PLOT_SIG);
+    event->plot_number     = plot_number;
+    safe_strncpy(event->data_label, data_label, sizeof(event->data_label));
+    // To avoid having a massive QP message (and running out of RAM due to the massive pool), the AO
+    // calling this function is responsible for keeping a static array of data and not screwing with
+    // it until pc_com is done with it. Yes, this breaks many QP rules but whatever.
+    event->data_x = data_x; // pass the pointer
+    event->data_y = data_y; // pass the pointer
+    if (data_len > 512)
+    {
+        event->data_len = 512;
+        PC_COM_print("Data length is too long for PC_COM_draw_plot");
+    }
+    else
+        event->data_len = data_len;
+
+    QACTIVE_POST(AO_PC_COM, (QEvt *) (event), AO_PC_COM);
+}
+
+/**
+ ***************************************************************************************************
+ *
+ * @brief   Draw (or wipe and redraw) up to 512 magnitude + phase datapoints to a log-log plot
+ *
+ **************************************************************************************************/
+void PC_COM_draw_bode_plot(
+    uint8_t plot_number,
+    const char *data_label,
+    uint32_t *data_freq,
+    float32_t *data_mag,
+    float32_t *data_phase,
+    int16_t data_len)
+{
+    DrawBodePlotEvent_T *event = Q_NEW(DrawBodePlotEvent_T, DRAW_BODE_PLOT_SIG);
+    event->plot_number         = plot_number;
+    safe_strncpy(event->data_label, data_label, sizeof(event->data_label));
+    // To avoid having a massive QP message (and running out of RAM due to the massive pool), the AO
+    // calling this function is responsible for keeping a static array of data and not screwing with
+    // it until pc_com is done with it. Yes, this breaks many QP rules but whatever.
+    event->data_freq  = data_freq;  // pass the pointer
+    event->data_mag   = data_mag;   // pass the pointer
+    event->data_phase = data_phase; // pass the pointer
+    event->data_len   = data_len;
+
+    QACTIVE_POST(AO_PC_COM, (QEvt *) (event), AO_PC_COM);
+}
+
 /**************************************************************************************************\
 * Private functions
 \**************************************************************************************************/
@@ -196,10 +319,6 @@ void PC_COM_print(const char *msg)
 static QState initial(PC_COM *const me, void const *const par)
 {
     Q_UNUSED_PAR(par);
-
-    // subscribe
-    QActive_subscribe((QActive *) me, PUBSUB_ADD_DATA_TO_PLOT_SIG);
-    QActive_subscribe((QActive *) me, PUBSUB_DRAW_PLOT_SIG);
 
     // Process CLI  every 25ms
     QTimeEvt_armX(
@@ -319,26 +438,18 @@ static QState active(PC_COM *const me, QEvt const *const e)
             break;
         }
 
-        case PUBSUB_ADD_DATA_TO_PLOT_SIG: {
+        case CLEAR_PLOTS_SIG: {
             // set message type
-            me->tx_packet.type = MessageType_ADD_TO_PLOT;
+            me->tx_packet.type = MessageType_CLEAR_PLOTS;
 
             // create pb message
-            AddToPlot message = AddToPlot_init_zero;
+            ClearPlots message = ClearPlots_init_zero;
 
             // populate message and encode it
             pb_ostream_t stream = pb_ostream_from_buffer(
                 ((uint8_t *) &me->tx_packet.message), sizeof(TX_Message_Buffer_T));
 
-            message.milliseconds_tick = Q_EVT_CAST(AddDataToPlotEvent_T)->milliseconds;
-            safe_strncpy(
-                message.data_label,
-                Q_EVT_CAST(AddDataToPlotEvent_T)->data_label,
-                sizeof(message.data_label));
-            message.plot_number = Q_EVT_CAST(AddDataToPlotEvent_T)->plot_number;
-            message.data_point  = Q_EVT_CAST(AddDataToPlotEvent_T)->data_point;
-
-            bool ok = pb_encode(&stream, AddToPlot_fields, &message);
+            bool ok = pb_encode(&stream, ClearPlots_fields, &message);
             Q_ASSERT(ok);
 
             // calculate CRC and transmit
@@ -347,7 +458,63 @@ static QState active(PC_COM *const me, QEvt const *const e)
             break;
         }
 
-        case PUBSUB_DRAW_PLOT_SIG: {
+        case ADD_XY_TO_PLOT_SIG: {
+            // set message type
+            me->tx_packet.type = MessageType_ADD_XY_TO_PLOT;
+
+            // create pb message
+            AddXYToPlot message = AddXYToPlot_init_zero;
+
+            // populate message and encode it
+            pb_ostream_t stream = pb_ostream_from_buffer(
+                ((uint8_t *) &me->tx_packet.message), sizeof(TX_Message_Buffer_T));
+
+            safe_strncpy(
+                message.data_label,
+                Q_EVT_CAST(AddDataToPlotEvent_T)->data_label,
+                sizeof(message.data_label));
+            message.plot_number = Q_EVT_CAST(AddDataToPlotEvent_T)->plot_number;
+            message.data_x      = Q_EVT_CAST(AddDataToPlotEvent_T)->data_x;
+            message.data_y      = Q_EVT_CAST(AddDataToPlotEvent_T)->data_y;
+
+            bool ok = pb_encode(&stream, AddXYToPlot_fields, &message);
+            Q_ASSERT(ok);
+
+            // calculate CRC and transmit
+            calculate_crc_and_send_packet(me, stream.bytes_written);
+            status = Q_HANDLED();
+            break;
+        }
+
+        case LOG_TO_PLOT_SIG: {
+            // set message type
+            me->tx_packet.type = MessageType_LOG_TO_PLOT;
+
+            // create pb message
+            LogToPlot message = LogToPlot_init_zero;
+
+            // populate message and encode it
+            pb_ostream_t stream = pb_ostream_from_buffer(
+                ((uint8_t *) &me->tx_packet.message), sizeof(TX_Message_Buffer_T));
+
+            safe_strncpy(
+                message.data_label,
+                Q_EVT_CAST(AddDataToPlotEvent_T)->data_label,
+                sizeof(message.data_label));
+            message.plot_number       = Q_EVT_CAST(AddDataToPlotEvent_T)->plot_number;
+            message.milliseconds_tick = Q_EVT_CAST(AddDataToPlotEvent_T)->milliseconds;
+            message.data_y            = Q_EVT_CAST(AddDataToPlotEvent_T)->data_y;
+
+            bool ok = pb_encode(&stream, LogToPlot_fields, &message);
+            Q_ASSERT(ok);
+
+            // calculate CRC and transmit
+            calculate_crc_and_send_packet(me, stream.bytes_written);
+            status = Q_HANDLED();
+            break;
+        }
+
+        case DRAW_PLOT_SIG: {
             // set message type
             me->tx_packet.type = MessageType_DRAW_PLOT;
 
@@ -369,6 +536,43 @@ static QState active(PC_COM *const me, QEvt const *const e)
             message.data_y_count = event->data_len;
 
             bool ok = pb_encode(&stream, DrawPlot_fields, &message);
+            Q_ASSERT(ok);
+
+            // calculate CRC and transmit
+            calculate_crc_and_send_packet(me, stream.bytes_written);
+            status = Q_HANDLED();
+            break;
+        }
+
+        case DRAW_BODE_PLOT_SIG: {
+            // set message type
+            me->tx_packet.type = MessageType_DRAW_BODE_PLOT;
+
+            // create pb message
+            DrawBodePlot message = DrawBodePlot_init_zero;
+
+            // populate message and encode it
+            pb_ostream_t stream = pb_ostream_from_buffer(
+                ((uint8_t *) &me->tx_packet.message), sizeof(TX_Message_Buffer_T));
+
+            const DrawBodePlotEvent_T *event = Q_EVT_CAST(DrawBodePlotEvent_T);
+
+            safe_strncpy(message.data_label, event->data_label, sizeof(message.data_label));
+            message.plot_number = event->plot_number;
+            Q_ASSERT(event->data_len * sizeof(event->data_freq[0]) <= sizeof(message.data_freq));
+            memcpy(
+                message.data_freq, event->data_freq, event->data_len * sizeof(event->data_freq[0]));
+            message.data_freq_count = event->data_len;
+            memcpy(
+                message.data_mag, event->data_phase, event->data_len * sizeof(event->data_mag[0]));
+            message.data_mag_count = event->data_len;
+            memcpy(
+                message.data_phase,
+                event->data_phase,
+                event->data_len * sizeof(event->data_phase[0]));
+            message.data_phase_count = event->data_len;
+
+            bool ok = pb_encode(&stream, DrawBodePlot_fields, &message);
             Q_ASSERT(ok);
 
             // calculate CRC and transmit

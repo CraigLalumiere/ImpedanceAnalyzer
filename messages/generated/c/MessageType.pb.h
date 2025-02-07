@@ -16,9 +16,15 @@ typedef enum _MessageType {
     /* CLI Data */
     MessageType_CLI_DATA = 2,
     /* Add datapoint to some plot */
-    MessageType_ADD_TO_PLOT = 3,
+    MessageType_LOG_TO_PLOT = 3,
+    /* Add datapoint to some plot */
+    MessageType_ADD_XY_TO_PLOT = 4,
     /* Send a bunch of data to draw an entire plot */
-    MessageType_DRAW_PLOT = 4
+    MessageType_DRAW_PLOT = 5,
+    /* Send a bunch of data to draw an entire bode (mag/phase) plot on log/log scale */
+    MessageType_DRAW_BODE_PLOT = 6,
+    /* Wipe all plot data */
+    MessageType_CLEAR_PLOTS = 7
 } MessageType;
 
 #ifdef __cplusplus
@@ -27,8 +33,8 @@ extern "C" {
 
 /* Helper constants for enums */
 #define _MessageType_MIN MessageType_LOG_PRINT
-#define _MessageType_MAX MessageType_DRAW_PLOT
-#define _MessageType_ARRAYSIZE ((MessageType)(MessageType_DRAW_PLOT+1))
+#define _MessageType_MAX MessageType_CLEAR_PLOTS
+#define _MessageType_ARRAYSIZE ((MessageType)(MessageType_CLEAR_PLOTS+1))
 
 
 #ifdef __cplusplus

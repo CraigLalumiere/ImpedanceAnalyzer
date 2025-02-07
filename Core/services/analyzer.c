@@ -14,7 +14,6 @@ Q_DEFINE_THIS_MODULE("analyzer")
 * Private macros
 \**************************************************************************************************/
 
-#define ADC_DOWNSAMPLING_RATE   5 // ADC clock runs 3x slower than DAC clock
 #define ADC_DMA_BUFFER_MAX_SIZE 512
 #define DAC_DMA_BUFFER_MAX_SIZE ADC_DOWNSAMPLING_RATE *ADC_DMA_BUFFER_MAX_SIZE
 
@@ -130,15 +129,6 @@ static MagPhase_T ADC_FourierAnalysis(int16_t *data, uint16_t data_len);
 static void ApplyCurrentOffsetCalibration();
 static void ApplyGainOffsetCalibration();
 
-static void log_XY(uint8_t plot_number, const char *data_label, uint32_t x, float32_t y);
-static void log_data(uint8_t plot_number, const char *data_label, float32_t data_point);
-static void log_data_block(
-    uint8_t plot_number,
-    const char *data_label,
-    uint32_t *data_x,
-    float32_t *data_y,
-    int16_t data_len);
-
 /**************************************************************************************************\
 * Private memory declarations
 \**************************************************************************************************/
@@ -160,8 +150,8 @@ void Analyzer_ctor(void)
     memset(me->adc_dma_buffer, 0, ADC_DMA_BUFFER_MAX_SIZE * sizeof(me->adc_dma_buffer[0]));
     memset(me->current_offset_cal, 0, FREQ_POINTS_MAX * sizeof(me->current_offset_cal[0]));
 
-    me->freq_start      = 10000;
-    me->freq_end        = 40000;
+    me->freq_start      = 4700;
+    me->freq_end        = 400000;
     me->num_freq_points = 100;
     me->freq_spacing    = pow(me->freq_end / me->freq_start, 1.0 / me->num_freq_points);
 
@@ -312,7 +302,7 @@ QState standby(Analyzer *const me, QEvt const *const e)
                 dataY[i] = (float32_t) me->dac_dma_buffer[i];
             }
 
-            log_data_block(3, "sine", dataX, dataY, me->dac_dma_data_len);
+            PC_COM_draw_plot(3, "sine", dataX, dataY, me->dac_dma_data_len);
 
             status = Q_HANDLED();
             break;
@@ -352,8 +342,8 @@ QState impedance_sweep(Analyzer *const me, QEvt const *const e)
             break;
         }
         case SUBSTATE_FREQ_SWEEP_COMPLETE_SIG: {
-            ApplyCurrentOffsetCalibration();
-            ApplyGainOffsetCalibration();
+            // ApplyCurrentOffsetCalibration();
+            // ApplyGainOffsetCalibration();
 
             MagPhase_T dut_impedance[FREQ_POINTS_MAX];
 
@@ -363,6 +353,10 @@ QState impedance_sweep(Analyzer *const me, QEvt const *const e)
                     me->current_measurements[i].magnitude;
                 dut_impedance[i].phase = me->voltage_measurements[i].phase -
                     me->current_measurements[i].phase;
+                if (dut_impedance[i].phase > 180)
+                    dut_impedance[i].phase -= 360;
+                if (dut_impedance[i].phase < -180)
+                    dut_impedance[i].phase += 360;
             }
 
             // static float32_t dataV[512];
@@ -372,17 +366,11 @@ QState impedance_sweep(Analyzer *const me, QEvt const *const e)
             static uint32_t dataX[FREQ_POINTS_MAX];
             for (int i = 0; i < me->num_freq_points; i++)
             {
-                // dataV[i] = (float32_t) (me->voltage_measurements[i].magnitude);
-                // dataI[i] = (float32_t) (me->current_measurements[i].magnitude);
                 dataZmag[i]   = (float32_t) dut_impedance[i].magnitude;
                 dataZphase[i] = (float32_t) dut_impedance[i].phase;
                 dataX[i]      = me->freq_list[i];
             }
-
-            // log_data_block(0, "V", me->freq_list, dataV, me->num_freq_points);
-            // log_data_block(1, "I", me->freq_list, dataI, me->num_freq_points);
-            log_data_block(0, "Z mag", dataX, dataZmag, me->num_freq_points);
-            log_data_block(1, "Z phase", dataX, dataZphase, me->num_freq_points);
+            PC_COM_draw_bode_plot(0, "Z", dataX, dataZmag, dataZphase, me->num_freq_points);
 
             PC_COM_print("Impedance sweep complete");
 
@@ -498,21 +486,21 @@ QState substate_impedance_sweep(Analyzer *const me, QEvt const *const e)
         case POSTED_WAVEFORM_CAPTURE_COMPLETE_SIG: {
             // Voltage across source impedance is ADC2-ADC1
 
-            int16_t applied_voltage_waveform[ADC_DMA_BUFFER_MAX_SIZE];
+            int16_t load_voltage_waveform[ADC_DMA_BUFFER_MAX_SIZE];
             int16_t voltage_across_resistor_waveform[ADC_DMA_BUFFER_MAX_SIZE];
             for (int i = 0; i < me->adc_dma_data_len; i++)
             {
-                int16_t v1 = me->adc_dma_buffer[i] & 0xFFF;
-                int16_t v2 = me->adc_dma_buffer[i] >> 16;
+                int16_t v1 = me->adc_dma_buffer[i] & 0xFFF; // voltage at load
+                int16_t v2 = me->adc_dma_buffer[i] >> 16;   // voltage at output of op amp
 
-                applied_voltage_waveform[i]         = v2;
+                load_voltage_waveform[i]            = v1;
                 voltage_across_resistor_waveform[i] = v2 - v1;
             }
             MagPhase_T resistor_voltage = ADC_FourierAnalysis(
                 voltage_across_resistor_waveform, me->adc_dma_data_len);
 
-            MagPhase_T applied_voltage = ADC_FourierAnalysis(
-                applied_voltage_waveform, me->adc_dma_data_len);
+            MagPhase_T load_voltage = ADC_FourierAnalysis(
+                load_voltage_waveform, me->adc_dma_data_len);
 
             // // if the source resistor voltage is too small, impedance should be increased
             // if (resistor_voltage.magnitude < MINIMUM_VOLTAGE_ACROSS_LOAD_RESISTOR &&
@@ -535,7 +523,7 @@ QState substate_impedance_sweep(Analyzer *const me, QEvt const *const e)
             current.magnitude = resistor_voltage.magnitude / impedances[me->source_impedance];
             current.phase     = resistor_voltage.phase;
 
-            me->voltage_measurements[me->freq_index] = applied_voltage;
+            me->voltage_measurements[me->freq_index] = load_voltage;
             me->current_measurements[me->freq_index] = current;
 
             // char mag_label[16] = {0};
@@ -575,6 +563,18 @@ QState substate_impedance_sweep(Analyzer *const me, QEvt const *const e)
                 status = Q_TRAN(&substate_impedance_sweep);
             }
             // }
+            break;
+        }
+        case TIMEOUT_SIG: {
+            char print_buffer[PC_COM_EVENT_MAX_MSG_LENGTH] = {0};
+            snprintf(
+                print_buffer,
+                sizeof(print_buffer),
+                "Working... %d/%d",
+                me->freq_index,
+                me->num_freq_points);
+            PC_COM_print(print_buffer);
+            status = Q_HANDLED();
             break;
         }
         default: {
@@ -761,43 +761,4 @@ static void ApplyGainOffsetCalibration()
         me->current_measurements[i].magnitude /= me->gain_offset_cal[i].magnitude;
         me->current_measurements[i].phase -= me->gain_offset_cal[i].phase;
     }
-}
-
-static void log_XY(uint8_t plot_number, const char *data_label, uint32_t x, float32_t y)
-{
-    AddDataToPlotEvent_T *event = Q_NEW(AddDataToPlotEvent_T, PUBSUB_ADD_DATA_TO_PLOT_SIG);
-    event->milliseconds         = x;
-    event->plot_number          = plot_number;
-    safe_strncpy(event->data_label, data_label, sizeof(event->data_label));
-    event->data_point = y;
-
-    QACTIVE_PUBLISH(&event->super, &me->super);
-}
-
-static void log_data(const uint8_t plot_number, const char *data_label, const float32_t data_point)
-{
-    AddDataToPlotEvent_T *event = Q_NEW(AddDataToPlotEvent_T, PUBSUB_ADD_DATA_TO_PLOT_SIG);
-    event->milliseconds         = BSP_Get_Milliseconds_Tick();
-    event->plot_number          = plot_number;
-    safe_strncpy(event->data_label, data_label, sizeof(event->data_label));
-    event->data_point = data_point;
-
-    QACTIVE_PUBLISH(&event->super, &me->super);
-}
-
-static void log_data_block(
-    uint8_t plot_number,
-    const char *data_label,
-    uint32_t *data_x,
-    float32_t *data_y,
-    int16_t data_len)
-{
-    DrawPlotEvent_T *event = Q_NEW(DrawPlotEvent_T, PUBSUB_DRAW_PLOT_SIG);
-    event->plot_number     = plot_number;
-    safe_strncpy(event->data_label, data_label, sizeof(event->data_label));
-    event->data_x   = data_x; // pass the pointer
-    event->data_y   = data_y; // pass the pointer
-    event->data_len = data_len;
-
-    QACTIVE_PUBLISH(&event->super, &me->super);
 }

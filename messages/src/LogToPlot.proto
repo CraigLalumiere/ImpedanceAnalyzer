@@ -1,0 +1,8 @@
+syntax = "proto2";
+
+message LogToPlot {
+  required uint32 plot_number = 1;
+  required string data_label = 2;
+  required uint32 milliseconds_tick =3;
+  required float data_y = 4;
+}

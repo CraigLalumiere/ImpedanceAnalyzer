@@ -17,7 +17,9 @@
         "clidata.pb.h": "c",
         "messagetype.pb.h": "c",
         "analyzer.h": "c",
-        "bsp.h": "c"
+        "bsp.h": "c",
+        "addxytoplot.pb.h": "c",
+        "clearplots.pb.h": "c"
     },
     "editor.rulers": [
         100

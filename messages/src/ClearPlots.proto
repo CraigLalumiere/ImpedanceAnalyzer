@@ -1,0 +1,5 @@
+syntax = "proto2";
+
+// Indicates to Python to wipe all plots clear
+message ClearPlots {
+}

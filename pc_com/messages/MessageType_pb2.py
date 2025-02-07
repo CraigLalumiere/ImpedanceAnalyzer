@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto2',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x11MessageType.proto*J\n\x0bMessageType\x12\r\n\tLOG_PRINT\x10\x01\x12\x0c\n\x08\x43LI_DATA\x10\x02\x12\x0f\n\x0b\x41\x44\x44_TO_PLOT\x10\x03\x12\r\n\tDRAW_PLOT\x10\x04'
+  serialized_pb=b'\n\x11MessageType.proto*\x83\x01\n\x0bMessageType\x12\r\n\tLOG_PRINT\x10\x01\x12\x0c\n\x08\x43LI_DATA\x10\x02\x12\x0f\n\x0bLOG_TO_PLOT\x10\x03\x12\x12\n\x0e\x41\x44\x44_XY_TO_PLOT\x10\x04\x12\r\n\tDRAW_PLOT\x10\x05\x12\x12\n\x0e\x44RAW_BODE_PLOT\x10\x06\x12\x0f\n\x0b\x43LEAR_PLOTS\x10\x07'
 )
 
 _MESSAGETYPE = _descriptor.EnumDescriptor(
@@ -41,28 +41,46 @@ _MESSAGETYPE = _descriptor.EnumDescriptor(
       type=None,
       create_key=_descriptor._internal_create_key),
     _descriptor.EnumValueDescriptor(
-      name='ADD_TO_PLOT', index=2, number=3,
+      name='LOG_TO_PLOT', index=2, number=3,
       serialized_options=None,
       type=None,
       create_key=_descriptor._internal_create_key),
     _descriptor.EnumValueDescriptor(
-      name='DRAW_PLOT', index=3, number=4,
+      name='ADD_XY_TO_PLOT', index=3, number=4,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
+    _descriptor.EnumValueDescriptor(
+      name='DRAW_PLOT', index=4, number=5,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
+    _descriptor.EnumValueDescriptor(
+      name='DRAW_BODE_PLOT', index=5, number=6,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
+    _descriptor.EnumValueDescriptor(
+      name='CLEAR_PLOTS', index=6, number=7,
       serialized_options=None,
       type=None,
       create_key=_descriptor._internal_create_key),
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=21,
-  serialized_end=95,
+  serialized_start=22,
+  serialized_end=153,
 )
 _sym_db.RegisterEnumDescriptor(_MESSAGETYPE)
 
 MessageType = enum_type_wrapper.EnumTypeWrapper(_MESSAGETYPE)
 LOG_PRINT = 1
 CLI_DATA = 2
-ADD_TO_PLOT = 3
-DRAW_PLOT = 4
+LOG_TO_PLOT = 3
+ADD_XY_TO_PLOT = 4
+DRAW_PLOT = 5
+DRAW_BODE_PLOT = 6
+CLEAR_PLOTS = 7
 
 
 DESCRIPTOR.enum_types_by_name['MessageType'] = _MESSAGETYPE

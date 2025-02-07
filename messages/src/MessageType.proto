@@ -8,8 +8,17 @@ enum MessageType {
     CLI_DATA = 2;    
 
     // Add datapoint to some plot
-    ADD_TO_PLOT = 3;
+    LOG_TO_PLOT = 3;
+
+    // Add datapoint to some plot
+    ADD_XY_TO_PLOT = 4;
 
     // Send a bunch of data to draw an entire plot
-    DRAW_PLOT = 4;
+    DRAW_PLOT = 5;
+
+    // Send a bunch of data to draw an entire bode (mag/phase) plot on log/log scale
+    DRAW_BODE_PLOT = 6;
+
+    // Wipe all plot data
+    CLEAR_PLOTS = 7;
 }

@@ -1,0 +1,4 @@
+DrawBodePlot.data_label max_size:16
+DrawBodePlot.data_freq max_count:512
+DrawBodePlot.data_mag max_count:512
+DrawBodePlot.data_phase max_count:512

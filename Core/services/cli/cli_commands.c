@@ -255,13 +255,19 @@ static void on_cli_set_freq_range(EmbeddedCli *cli, char *args, void *context)
 
     if (arg_f_start < FREQ_MIN)
     {
-        embeddedCliPrint(cli, HELP_SET_FREQ_RANGE);
+        char print_buffer[CLI_PRINT_BUFFER_SIZE] = {0};
+        snprintf(
+            print_buffer, sizeof(print_buffer), "Frequency can't be less than %.f Hz", FREQ_MIN);
+        embeddedCliPrint(cli, print_buffer);
         return;
     }
 
     if (arg_f_end > FREQ_MAX)
     {
-        embeddedCliPrint(cli, HELP_SET_FREQ_RANGE);
+        char print_buffer[CLI_PRINT_BUFFER_SIZE] = {0};
+        snprintf(
+            print_buffer, sizeof(print_buffer), "Frequency can't be greater than %d Hz", FREQ_MAX);
+        embeddedCliPrint(cli, print_buffer);
         return;
     }
 
@@ -323,7 +329,7 @@ static void on_cli_set_impedance(EmbeddedCli *cli, char *args, void *context)
 
     if (arg_N > 7)
     {
-        embeddedCliPrint(cli, HELP_SET_FREQ_RANGE);
+        embeddedCliPrint(cli, HELP_SET_IMPEDANCE);
         return;
     }
 

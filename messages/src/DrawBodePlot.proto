@@ -1,0 +1,9 @@
+syntax = "proto2";
+
+message DrawBodePlot {
+  required uint32 plot_number = 1;
+  required string data_label = 2;
+  repeated uint32 data_freq = 3 [packed=true];
+  repeated float data_mag = 4 [packed=true];
+  repeated float data_phase = 5 [packed=true];
+}

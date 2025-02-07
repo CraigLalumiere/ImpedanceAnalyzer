@@ -71,8 +71,11 @@ add_subdirectory(${LIBRARY_PATH}/qpc/ test)
 set(messages_SRCS
     ${MESSAGES_GENERATED_PATH}/c/LogPrint.pb.c
     ${MESSAGES_GENERATED_PATH}/c/CLIData.pb.c
-    ${MESSAGES_GENERATED_PATH}/c/AddToPlot.pb.c
+    ${MESSAGES_GENERATED_PATH}/c/AddXYToPlot.pb.c
+    ${MESSAGES_GENERATED_PATH}/c/ClearPlots.pb.c
+    ${MESSAGES_GENERATED_PATH}/c/DrawBodePlot.pb.c
     ${MESSAGES_GENERATED_PATH}/c/DrawPlot.pb.c
+    ${MESSAGES_GENERATED_PATH}/c/LogToPlot.pb.c
 )
 
 set(sources_SRCS 
