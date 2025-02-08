@@ -34,7 +34,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.txt_data_dir.setText(self.data_folder)
 
         # set app title
-        self.setWindowTitle("NUCLEO-G474 Com Tool")
+        self.setWindowTitle("ImpedanceAnalyzer Com Tool")
 
         self.update_interface_state()
 
