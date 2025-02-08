@@ -1,15 +1,21 @@
 import struct
 from crc import calculate_crc
-from messages.LogPrint_pb2 import LogPrint
 from messages.CLIData_pb2 import CLIData
-from messages.AddToPlot_pb2 import AddToPlot
+from messages.AddXYToPlot_pb2 import AddXYToPlot
+from messages.ClearPlots_pb2 import ClearPlots
+from messages.DrawBodePlot_pb2 import DrawBodePlot
 from messages.DrawPlot_pb2 import DrawPlot
+from messages.LogPrint_pb2 import LogPrint
+from messages.LogToPlot_pb2 import LogToPlot
 from messages.MessageType_pb2 import MessageType
 
 message_from_id = {MessageType.LOG_PRINT: LogPrint,
                    MessageType.CLI_DATA: CLIData,
-                   MessageType.ADD_TO_PLOT: AddToPlot,
-                   MessageType.DRAW_PLOT: DrawPlot
+                   MessageType.LOG_TO_PLOT: LogToPlot,
+                   MessageType.ADD_XY_TO_PLOT: AddXYToPlot,
+                   MessageType.DRAW_PLOT: DrawPlot,
+                   MessageType.DRAW_BODE_PLOT: DrawBodePlot,
+                   MessageType.CLEAR_PLOTS: ClearPlots
                    }
 
 
