@@ -563,8 +563,7 @@ static QState active(PC_COM *const me, QEvt const *const e)
             memcpy(
                 message.data_freq, event->data_freq, event->data_len * sizeof(event->data_freq[0]));
             message.data_freq_count = event->data_len;
-            memcpy(
-                message.data_mag, event->data_phase, event->data_len * sizeof(event->data_mag[0]));
+            memcpy(message.data_mag, event->data_mag, event->data_len * sizeof(event->data_mag[0]));
             message.data_mag_count = event->data_len;
             memcpy(
                 message.data_phase,

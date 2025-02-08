@@ -210,6 +210,8 @@ QState initial(Analyzer *const me, void const *const par)
 
     QTimeEvt_armX(&me->timeEvt, BSP_TICKS_PER_SEC / 2U, BSP_TICKS_PER_SEC / 2U);
 
+    PC_COM_clear_plots();
+
     // Initialize the DAC to the 'mid' level
     // me->dac_dma_buffer[0] = OUTPUT_MID;
     // BSP_Setup_ADC_DAC_DMA(
@@ -302,7 +304,7 @@ QState standby(Analyzer *const me, QEvt const *const e)
                 dataY[i] = (float32_t) me->dac_dma_buffer[i];
             }
 
-            PC_COM_draw_plot(3, "sine", dataX, dataY, me->dac_dma_data_len);
+            PC_COM_draw_plot(2, "sine", dataX, dataY, me->dac_dma_data_len);
 
             status = Q_HANDLED();
             break;
