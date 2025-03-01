@@ -153,7 +153,8 @@ void Analyzer_ctor(void)
     me->freq_start      = 4700;
     me->freq_end        = 400000;
     me->num_freq_points = 100;
-    me->freq_spacing    = pow(me->freq_end / me->freq_start, 1.0 / me->num_freq_points);
+    me->freq_spacing    = pow(
+        (float) me->freq_end / (float) me->freq_start, 1.0 / me->num_freq_points);
 
     me->source_impedance = IMPEDANCE_10k;
     BSP_Set_Source_Impedance(me->source_impedance);
@@ -273,7 +274,8 @@ QState standby(Analyzer *const me, QEvt const *const e)
             me->freq_start      = event->freq_start;
             me->freq_end        = event->freq_end;
             me->num_freq_points = event->num_freq_points;
-            me->freq_spacing    = pow(me->freq_end / me->freq_start, 1.0 / me->num_freq_points);
+            me->freq_spacing    = pow(
+                (float) me->freq_end / (float) me->freq_start, 1.0 / me->num_freq_points);
 
             // InitFrequenciesToSweep();
 

@@ -48,9 +48,9 @@ typedef enum
 {
     AO_RESERVED = 0U,
     AO_PRIO_BLINKY,
+    AO_PRIO_ANALYZER,
     AO_PRIO_APP_CLI,
     AO_PRIO_APP_PC_COM,
-    AO_PRIO_ANALYZER,
 } AO_Priority_T;
 
 typedef struct
