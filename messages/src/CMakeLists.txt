@@ -7,9 +7,11 @@ set(PROTO_FILES
         CLIData.proto
         LogToPlot.proto
         AddXYToPlot.proto
+        AddToBodePlot.proto
         DrawPlot.proto
         DrawBodePlot.proto
         ClearPlots.proto
+        ConfigPlot.proto
 )
 
 

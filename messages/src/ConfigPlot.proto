@@ -1,0 +1,10 @@
+syntax = "proto2";
+
+message ConfigPlot {
+  required uint32 plot_number = 1;
+  required string plot_title = 2;
+  required string x_label = 3;
+  required string x_units = 4;
+  required string y_label = 5;
+  required string y_units = 6;
+}

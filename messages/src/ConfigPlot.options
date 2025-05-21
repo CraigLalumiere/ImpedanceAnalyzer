@@ -1,0 +1,5 @@
+ConfigPlot.plot_title max_size:64
+ConfigPlot.x_label max_size:64
+ConfigPlot.x_units max_size:8
+ConfigPlot.y_label max_size:64
+ConfigPlot.y_units max_size:8

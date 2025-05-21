@@ -26,6 +26,7 @@
 #include "blinky.h"
 #include "bsp.h"
 // #include "cli.h"
+#include "analyzer.h"
 #include "pc_com.h"
 #include "posted_signals.h"
 #include "qpc.h"
@@ -77,6 +78,7 @@ typedef struct
         QEvt base_event;
         PCCOMPrintEvent_T pc_com_print_evt;
         PCCOMCliDataEvent_T pc_com_cli_event;
+        ConfigPlotEvent_T pc_com_config_plot_event;
     } large_messages;
 } LongMessageUnion_T;
 
@@ -105,8 +107,6 @@ UART_HandleTypeDef hlpuart1;
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim8;
 
-extern bool sinusoid_running;
-
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -130,11 +130,13 @@ static void MX_ADC2_Init(void);
 
 inline void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
-    if (sinusoid_running)
+    if (hadc->Instance == hadc1.Instance)
     {
-        sinusoid_running        = false;
-        static QEvt const event = QEVT_INITIALIZER(POSTED_WAVEFORM_CAPTURE_COMPLETE_SIG);
-        QACTIVE_POST(AO_Analyzer, &event, NULL);
+        uint32_t dual_adc_val = HAL_ADCEx_MultiModeGetValue(hadc);
+
+        Analyzer_ADC_Callback(dual_adc_val);
+        static uint16_t i = 0;
+        i++;
     }
 }
 inline void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc)

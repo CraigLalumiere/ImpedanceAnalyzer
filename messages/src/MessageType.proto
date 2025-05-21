@@ -13,12 +13,18 @@ enum MessageType {
     // Add datapoint to some plot
     ADD_XY_TO_PLOT = 4;
 
+    // Add datapoint to a bode plot
+    ADD_TO_BODE_PLOT = 5;
+
     // Send a bunch of data to draw an entire plot
-    DRAW_PLOT = 5;
+    DRAW_PLOT = 6;
 
     // Send a bunch of data to draw an entire bode (mag/phase) plot on log/log scale
-    DRAW_BODE_PLOT = 6;
+    DRAW_BODE_PLOT = 7;
 
     // Wipe all plot data
-    CLEAR_PLOTS = 7;
+    CLEAR_PLOTS = 8;
+
+    // Set a plot's title and X/Y axis labels
+    CONFIG_PLOT = 9;
 }

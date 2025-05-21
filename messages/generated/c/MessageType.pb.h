@@ -19,12 +19,16 @@ typedef enum _MessageType {
     MessageType_LOG_TO_PLOT = 3,
     /* Add datapoint to some plot */
     MessageType_ADD_XY_TO_PLOT = 4,
+    /* Add datapoint to a bode plot */
+    MessageType_ADD_TO_BODE_PLOT = 5,
     /* Send a bunch of data to draw an entire plot */
-    MessageType_DRAW_PLOT = 5,
+    MessageType_DRAW_PLOT = 6,
     /* Send a bunch of data to draw an entire bode (mag/phase) plot on log/log scale */
-    MessageType_DRAW_BODE_PLOT = 6,
+    MessageType_DRAW_BODE_PLOT = 7,
     /* Wipe all plot data */
-    MessageType_CLEAR_PLOTS = 7
+    MessageType_CLEAR_PLOTS = 8,
+    /* Set a plot's title and X/Y axis labels */
+    MessageType_CONFIG_PLOT = 9
 } MessageType;
 
 #ifdef __cplusplus
@@ -33,8 +37,8 @@ extern "C" {
 
 /* Helper constants for enums */
 #define _MessageType_MIN MessageType_LOG_PRINT
-#define _MessageType_MAX MessageType_CLEAR_PLOTS
-#define _MessageType_ARRAYSIZE ((MessageType)(MessageType_CLEAR_PLOTS+1))
+#define _MessageType_MAX MessageType_CONFIG_PLOT
+#define _MessageType_ARRAYSIZE ((MessageType)(MessageType_CONFIG_PLOT+1))
 
 
 #ifdef __cplusplus

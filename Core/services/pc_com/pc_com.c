@@ -1,8 +1,10 @@
 #include "pc_com.h"
 #include "bsp.h"
+#include "c/AddToBodePlot.pb.h"
 #include "c/AddXYToPlot.pb.h"
 #include "c/CLIData.pb.h"
 #include "c/ClearPlots.pb.h"
+#include "c/ConfigPlot.pb.h"
 #include "c/DrawBodePlot.pb.h"
 #include "c/DrawPlot.pb.h"
 #include "c/LogPrint.pb.h"
@@ -38,8 +40,10 @@ enum PC_COM_Signals
     SERIAL_DATA_AVAILABLE_SIG = PRIVATE_SIGNAL_PC_COM_START,
     CLI_PROCESS_TICK_SIG,
     CLEAR_PLOTS_SIG,
+    CONFIG_PLOT_SIG,
     LOG_TO_PLOT_SIG,
     ADD_XY_TO_PLOT_SIG,
+    ADD_TO_BODE_PLOT_SIG,
     DRAW_PLOT_SIG,
     DRAW_BODE_PLOT_SIG,
     TEST_SIG
@@ -56,9 +60,11 @@ typedef union
     uint8_t CLIData_max[CLIDATA_PB_H_MAX_SIZE];
     uint8_t LogToPlot_max[LOGTOPLOT_PB_H_MAX_SIZE];
     uint8_t AddXYToPlot_max[ADDXYTOPLOT_PB_H_MAX_SIZE];
+    uint8_t AddToBodePlot_max[ADDTOBODEPLOT_PB_H_MAX_SIZE];
     uint8_t DrawPlot_max[DrawPlot_size];
     uint8_t DrawBodePlot_max[DRAWBODEPLOT_PB_H_MAX_SIZE];
     uint8_t ClearPlots_max[CLEARPLOTS_PB_H_MAX_SIZE];
+    uint8_t ConfigPlot_max[CONFIGPLOT_PB_H_MAX_SIZE];
 } TX_Message_Buffer_T;
 
 typedef union
@@ -205,7 +211,33 @@ void PC_COM_clear_plots()
 {
     PC_COM *const me        = &pc_com_inst;
     static QEvt const event = QEVT_INITIALIZER(CLEAR_PLOTS_SIG);
-    QACTIVE_POST(me, &event, me);
+    QACTIVE_POST(&me->super, &event, me);
+}
+
+/**
+ ***************************************************************************************************
+ *
+ * @brief   Set plot title and axis labels
+ *
+ **************************************************************************************************/
+
+void PC_COM_config_plot(
+    uint8_t plot_number,
+    const char *plot_title,
+    const char *x_label,
+    const char *x_units,
+    const char *y_label,
+    const char *y_units)
+{
+    ConfigPlotEvent_T *event = Q_NEW(ConfigPlotEvent_T, CONFIG_PLOT_SIG);
+    event->plot_number       = plot_number;
+    safe_strncpy(event->plot_title, plot_title, sizeof(event->plot_title));
+    safe_strncpy(event->x_label, x_label, sizeof(event->x_label));
+    safe_strncpy(event->x_units, x_units, sizeof(event->x_units));
+    safe_strncpy(event->y_label, y_label, sizeof(event->y_label));
+    safe_strncpy(event->y_units, y_units, sizeof(event->y_units));
+
+    QACTIVE_POST(AO_PC_COM, (QEvt *) (event), AO_PC_COM);
 }
 
 /**
@@ -215,8 +247,7 @@ void PC_COM_clear_plots()
  *
  **************************************************************************************************/
 
-void PC_COM_add_datapoint_to_plot(
-    uint8_t plot_number, const char *data_label, float32_t x, float32_t y)
+void PC_COM_add_datapoint_to_plot(uint8_t plot_number, const char *data_label, float x, float y)
 {
     AddDataToPlotEvent_T *event = Q_NEW(AddDataToPlotEvent_T, ADD_XY_TO_PLOT_SIG);
     event->plot_number          = plot_number;
@@ -230,11 +261,31 @@ void PC_COM_add_datapoint_to_plot(
 /**
  ***************************************************************************************************
  *
+ * @brief   Append Freq,Mag,Phase datapoint to a bode plot
+ *
+ **************************************************************************************************/
+
+void PC_COM_add_datapoint_to_bode_plot(
+    uint8_t plot_number, const char *data_label, float freq, float mag, float phase)
+{
+    AddDataToPlotEvent_T *event = Q_NEW(AddDataToPlotEvent_T, ADD_TO_BODE_PLOT_SIG);
+    event->plot_number          = plot_number;
+    safe_strncpy(event->data_label, data_label, sizeof(event->data_label));
+    event->data_x = freq;
+    event->data_y = mag;
+    event->data_z = phase;
+
+    QACTIVE_POST(AO_PC_COM, (QEvt *) (event), AO_PC_COM);
+}
+
+/**
+ ***************************************************************************************************
+ *
  * @brief   Add millisecond time-stamped datapoint to a plot
  *
  **************************************************************************************************/
 
-void PC_COM_log_data_to_plot(uint8_t plot_number, const char *data_label, float32_t y)
+void PC_COM_log_data_to_plot(uint8_t plot_number, const char *data_label, float y)
 {
     AddDataToPlotEvent_T *event = Q_NEW(AddDataToPlotEvent_T, LOG_TO_PLOT_SIG);
     event->plot_number          = plot_number;
@@ -253,11 +304,7 @@ void PC_COM_log_data_to_plot(uint8_t plot_number, const char *data_label, float3
  **************************************************************************************************/
 
 void PC_COM_draw_plot(
-    uint8_t plot_number,
-    const char *data_label,
-    uint32_t *data_x,
-    float32_t *data_y,
-    int16_t data_len)
+    uint8_t plot_number, const char *data_label, uint32_t *data_x, float *data_y, int16_t data_len)
 {
     DrawPlotEvent_T *event = Q_NEW(DrawPlotEvent_T, DRAW_PLOT_SIG);
     event->plot_number     = plot_number;
@@ -287,9 +334,9 @@ void PC_COM_draw_plot(
 void PC_COM_draw_bode_plot(
     uint8_t plot_number,
     const char *data_label,
-    uint32_t *data_freq,
-    float32_t *data_mag,
-    float32_t *data_phase,
+    float *data_freq,
+    float *data_mag,
+    float *data_phase,
     int16_t data_len)
 {
     DrawBodePlotEvent_T *event = Q_NEW(DrawBodePlotEvent_T, DRAW_BODE_PLOT_SIG);
@@ -458,6 +505,40 @@ static QState active(PC_COM *const me, QEvt const *const e)
             break;
         }
 
+        case CONFIG_PLOT_SIG: {
+            // set message type
+            me->tx_packet.type = MessageType_CONFIG_PLOT;
+
+            // create pb message
+            ConfigPlot message = ConfigPlot_init_zero;
+
+            // populate message and encode it
+            pb_ostream_t stream = pb_ostream_from_buffer(
+                ((uint8_t *) &me->tx_packet.message), sizeof(TX_Message_Buffer_T));
+
+            message.plot_number = Q_EVT_CAST(ConfigPlotEvent_T)->plot_number;
+            safe_strncpy(
+                message.plot_title,
+                Q_EVT_CAST(ConfigPlotEvent_T)->plot_title,
+                sizeof(message.plot_title));
+            safe_strncpy(
+                message.x_label, Q_EVT_CAST(ConfigPlotEvent_T)->x_label, sizeof(message.x_label));
+            safe_strncpy(
+                message.y_label, Q_EVT_CAST(ConfigPlotEvent_T)->y_label, sizeof(message.y_label));
+            safe_strncpy(
+                message.x_units, Q_EVT_CAST(ConfigPlotEvent_T)->x_units, sizeof(message.x_units));
+            safe_strncpy(
+                message.y_units, Q_EVT_CAST(ConfigPlotEvent_T)->y_units, sizeof(message.y_units));
+
+            bool ok = pb_encode(&stream, ConfigPlot_fields, &message);
+            Q_ASSERT(ok);
+
+            // calculate CRC and transmit
+            calculate_crc_and_send_packet(me, stream.bytes_written);
+            status = Q_HANDLED();
+            break;
+        }
+
         case ADD_XY_TO_PLOT_SIG: {
             // set message type
             me->tx_packet.type = MessageType_ADD_XY_TO_PLOT;
@@ -478,6 +559,35 @@ static QState active(PC_COM *const me, QEvt const *const e)
             message.data_y      = Q_EVT_CAST(AddDataToPlotEvent_T)->data_y;
 
             bool ok = pb_encode(&stream, AddXYToPlot_fields, &message);
+            Q_ASSERT(ok);
+
+            // calculate CRC and transmit
+            calculate_crc_and_send_packet(me, stream.bytes_written);
+            status = Q_HANDLED();
+            break;
+        }
+
+        case ADD_TO_BODE_PLOT_SIG: {
+            // set message type
+            me->tx_packet.type = MessageType_ADD_TO_BODE_PLOT;
+
+            // create pb message
+            AddToBodePlot message = AddToBodePlot_init_zero;
+
+            // populate message and encode it
+            pb_ostream_t stream = pb_ostream_from_buffer(
+                ((uint8_t *) &me->tx_packet.message), sizeof(TX_Message_Buffer_T));
+
+            safe_strncpy(
+                message.data_label,
+                Q_EVT_CAST(AddDataToPlotEvent_T)->data_label,
+                sizeof(message.data_label));
+            message.plot_number = Q_EVT_CAST(AddDataToPlotEvent_T)->plot_number;
+            message.data_freq   = Q_EVT_CAST(AddDataToPlotEvent_T)->data_x;
+            message.data_mag    = Q_EVT_CAST(AddDataToPlotEvent_T)->data_y;
+            message.data_phase  = Q_EVT_CAST(AddDataToPlotEvent_T)->data_z;
+
+            bool ok = pb_encode(&stream, AddToBodePlot_fields, &message);
             Q_ASSERT(ok);
 
             // calculate CRC and transmit

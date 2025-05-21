@@ -21,8 +21,6 @@ Q_DEFINE_THIS_MODULE("bsp.c")
 * Private type definitions
 \**************************************************************************************************/
 
-bool sinusoid_running = false;
-
 /**************************************************************************************************\
 * Private prototypes
 \**************************************************************************************************/
@@ -240,7 +238,6 @@ void BSP_Setup_ADC_DAC_DMA(
 
 void BSP_Start_Waveform_Timer()
 {
-    sinusoid_running = true;
     __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_CC2);
     TIM1->CNT = 0x00; // begin timer
 }

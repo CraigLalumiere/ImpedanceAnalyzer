@@ -14,7 +14,7 @@ typedef struct _DrawBodePlot {
     uint32_t plot_number;
     char data_label[16];
     pb_size_t data_freq_count;
-    uint32_t data_freq[512];
+    float data_freq[512];
     pb_size_t data_mag_count;
     float data_mag[512];
     pb_size_t data_phase_count;
@@ -41,7 +41,7 @@ extern "C" {
 #define DrawBodePlot_FIELDLIST(X, a) \
 X(a, STATIC,   REQUIRED, UINT32,   plot_number,       1) \
 X(a, STATIC,   REQUIRED, STRING,   data_label,        2) \
-X(a, STATIC,   REPEATED, UINT32,   data_freq,         3) \
+X(a, STATIC,   REPEATED, FLOAT,    data_freq,         3) \
 X(a, STATIC,   REPEATED, FLOAT,    data_mag,          4) \
 X(a, STATIC,   REPEATED, FLOAT,    data_phase,        5)
 #define DrawBodePlot_CALLBACK NULL
@@ -54,7 +54,7 @@ extern const pb_msgdesc_t DrawBodePlot_msg;
 
 /* Maximum encoded size of messages (where known) */
 #define DRAWBODEPLOT_PB_H_MAX_SIZE               DrawBodePlot_size
-#define DrawBodePlot_size                        8215
+#define DrawBodePlot_size                        7703
 
 #ifdef __cplusplus
 } /* extern "C" */

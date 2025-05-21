@@ -32,6 +32,9 @@ static void on_cli_do_gain_cal(EmbeddedCli *cli, char *args, void *context);
 static void on_cli_set_impedance(EmbeddedCli *cli, char *args, void *context);
 static void on_cli_draw_sinusoid(EmbeddedCli *cli, char *args, void *context);
 
+// helper functions
+static float parse_eng_suffix(const char *arg);
+
 static CliCommandBinding cli_cmd_list[] = {
     (CliCommandBinding) {
         "toggle-led",                     // command name (spaces are not allowed)
@@ -243,9 +246,9 @@ static void on_cli_set_freq_range(EmbeddedCli *cli, char *args, void *context)
     const char *arg2 = embeddedCliGetToken(args, 2);
     const char *arg3 = embeddedCliGetToken(args, 3);
 
-    arg_f_start = strtoul(arg1, &arg_end, 10);
-    arg_f_end   = strtol(arg2, &arg_end, 10);
-    arg_N       = strtol(arg3, &arg_end, 10);
+    arg_f_start = parse_eng_suffix(arg1);
+    arg_f_end   = parse_eng_suffix(arg2);
+    arg_N       = strtoul(arg3, &arg_end, 10);
 
     if (arg_f_start > arg_f_end)
     {
@@ -271,9 +274,15 @@ static void on_cli_set_freq_range(EmbeddedCli *cli, char *args, void *context)
         return;
     }
 
-    if (arg_N > FREQ_POINTS_MAX || arg_N < FREQ_POINTS_MIN)
+    if (arg_N > FREQ_POINTS_MAX)
     {
-        embeddedCliPrint(cli, HELP_SET_FREQ_RANGE);
+        char print_buffer[CLI_PRINT_BUFFER_SIZE] = {0};
+        snprintf(
+            print_buffer,
+            sizeof(print_buffer),
+            "Can't have more than %d frequency points",
+            FREQ_POINTS_MAX);
+        embeddedCliPrint(cli, print_buffer);
         return;
     }
 
@@ -368,4 +377,23 @@ static void on_cli_draw_sinusoid(EmbeddedCli *cli, char *args, void *context)
     event->value = arg_freq;
 
     QACTIVE_POST(AO_Analyzer, (QEvt *) (event), NULL);
+}
+
+static float parse_eng_suffix(const char *arg)
+{
+    char *arg_end;
+    float value = strtof(arg, &arg_end);
+    if (arg_end[0] == 'k')
+        value *= 1000;
+    if (arg_end[0] == 'M')
+        value *= 1000000;
+    if (arg_end[0] == 'm')
+        value /= 1000;
+    if (arg_end[0] == 'u')
+        value /= 1000000;
+    if (arg_end[0] == 'n')
+        value /= 1000000000;
+    if (arg_end[0] == 'p')
+        value /= 1000000000000;
+    return value;
 }

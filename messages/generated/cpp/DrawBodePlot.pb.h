@@ -189,26 +189,26 @@ class DrawBodePlot PROTOBUF_FINAL :
     kDataLabelFieldNumber = 2,
     kPlotNumberFieldNumber = 1,
   };
-  // repeated uint32 data_freq = 3 [packed = true];
+  // repeated float data_freq = 3 [packed = true];
   int data_freq_size() const;
   private:
   int _internal_data_freq_size() const;
   public:
   void clear_data_freq();
   private:
-  ::PROTOBUF_NAMESPACE_ID::uint32 _internal_data_freq(int index) const;
-  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+  float _internal_data_freq(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >&
       _internal_data_freq() const;
-  void _internal_add_data_freq(::PROTOBUF_NAMESPACE_ID::uint32 value);
-  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+  void _internal_add_data_freq(float value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >*
       _internal_mutable_data_freq();
   public:
-  ::PROTOBUF_NAMESPACE_ID::uint32 data_freq(int index) const;
-  void set_data_freq(int index, ::PROTOBUF_NAMESPACE_ID::uint32 value);
-  void add_data_freq(::PROTOBUF_NAMESPACE_ID::uint32 value);
-  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+  float data_freq(int index) const;
+  void set_data_freq(int index, float value);
+  void add_data_freq(float value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >&
       data_freq() const;
-  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >*
       mutable_data_freq();
 
   // repeated float data_mag = 4 [packed = true];
@@ -309,7 +309,7 @@ class DrawBodePlot PROTOBUF_FINAL :
   typedef void DestructorSkippable_;
   ::PROTOBUF_NAMESPACE_ID::internal::HasBits<1> _has_bits_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
-  ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 > data_freq_;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< float > data_freq_;
   mutable std::atomic<int> _data_freq_cached_byte_size_;
   ::PROTOBUF_NAMESPACE_ID::RepeatedField< float > data_mag_;
   mutable std::atomic<int> _data_mag_cached_byte_size_;
@@ -451,7 +451,7 @@ inline void DrawBodePlot::unsafe_arena_set_allocated_data_label(
   // @@protoc_insertion_point(field_unsafe_arena_set_allocated:DrawBodePlot.data_label)
 }
 
-// repeated uint32 data_freq = 3 [packed = true];
+// repeated float data_freq = 3 [packed = true];
 inline int DrawBodePlot::_internal_data_freq_size() const {
   return data_freq_.size();
 }
@@ -461,38 +461,38 @@ inline int DrawBodePlot::data_freq_size() const {
 inline void DrawBodePlot::clear_data_freq() {
   data_freq_.Clear();
 }
-inline ::PROTOBUF_NAMESPACE_ID::uint32 DrawBodePlot::_internal_data_freq(int index) const {
+inline float DrawBodePlot::_internal_data_freq(int index) const {
   return data_freq_.Get(index);
 }
-inline ::PROTOBUF_NAMESPACE_ID::uint32 DrawBodePlot::data_freq(int index) const {
+inline float DrawBodePlot::data_freq(int index) const {
   // @@protoc_insertion_point(field_get:DrawBodePlot.data_freq)
   return _internal_data_freq(index);
 }
-inline void DrawBodePlot::set_data_freq(int index, ::PROTOBUF_NAMESPACE_ID::uint32 value) {
+inline void DrawBodePlot::set_data_freq(int index, float value) {
   data_freq_.Set(index, value);
   // @@protoc_insertion_point(field_set:DrawBodePlot.data_freq)
 }
-inline void DrawBodePlot::_internal_add_data_freq(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+inline void DrawBodePlot::_internal_add_data_freq(float value) {
   data_freq_.Add(value);
 }
-inline void DrawBodePlot::add_data_freq(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+inline void DrawBodePlot::add_data_freq(float value) {
   _internal_add_data_freq(value);
   // @@protoc_insertion_point(field_add:DrawBodePlot.data_freq)
 }
-inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >&
 DrawBodePlot::_internal_data_freq() const {
   return data_freq_;
 }
-inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >&
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >&
 DrawBodePlot::data_freq() const {
   // @@protoc_insertion_point(field_list:DrawBodePlot.data_freq)
   return _internal_data_freq();
 }
-inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >*
 DrawBodePlot::_internal_mutable_data_freq() {
   return &data_freq_;
 }
-inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< ::PROTOBUF_NAMESPACE_ID::uint32 >*
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >*
 DrawBodePlot::mutable_data_freq() {
   // @@protoc_insertion_point(field_mutable_list:DrawBodePlot.data_freq)
   return _internal_mutable_data_freq();

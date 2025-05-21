@@ -64,7 +64,7 @@ static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] =
 const char descriptor_table_protodef_DrawBodePlot_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\022DrawBodePlot.proto\"|\n\014DrawBodePlot\022\023\n\013"
   "plot_number\030\001 \002(\r\022\022\n\ndata_label\030\002 \002(\t\022\025\n"
-  "\tdata_freq\030\003 \003(\rB\002\020\001\022\024\n\010data_mag\030\004 \003(\002B\002"
+  "\tdata_freq\030\003 \003(\002B\002\020\001\022\024\n\010data_mag\030\004 \003(\002B\002"
   "\020\001\022\026\n\ndata_phase\030\005 \003(\002B\002\020\001"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_DrawBodePlot_2eproto_deps[1] = {
@@ -204,14 +204,14 @@ const char* DrawBodePlot::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_I
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
-      // repeated uint32 data_freq = 3 [packed = true];
+      // repeated float data_freq = 3 [packed = true];
       case 3:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 26)) {
-          ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedUInt32Parser(_internal_mutable_data_freq(), ptr, ctx);
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedFloatParser(_internal_mutable_data_freq(), ptr, ctx);
           CHK_(ptr);
-        } else if (static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 24) {
-          _internal_add_data_freq(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr));
-          CHK_(ptr);
+        } else if (static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 29) {
+          _internal_add_data_freq(::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<float>(ptr));
+          ptr += sizeof(float);
         } else goto handle_unusual;
         continue;
       // repeated float data_mag = 4 [packed = true];
@@ -280,13 +280,9 @@ failure:
         2, this->_internal_data_label(), target);
   }
 
-  // repeated uint32 data_freq = 3 [packed = true];
-  {
-    int byte_size = _data_freq_cached_byte_size_.load(std::memory_order_relaxed);
-    if (byte_size > 0) {
-      target = stream->WriteUInt32Packed(
-          3, _internal_data_freq(), byte_size, target);
-    }
+  // repeated float data_freq = 3 [packed = true];
+  if (this->_internal_data_freq_size() > 0) {
+    target = stream->WriteFixedPacked(3, _internal_data_freq(), target);
   }
 
   // repeated float data_mag = 4 [packed = true];
@@ -349,10 +345,10 @@ size_t DrawBodePlot::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // repeated uint32 data_freq = 3 [packed = true];
+  // repeated float data_freq = 3 [packed = true];
   {
-    size_t data_size = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      UInt32Size(this->data_freq_);
+    unsigned int count = static_cast<unsigned int>(this->_internal_data_freq_size());
+    size_t data_size = 4UL * count;
     if (data_size > 0) {
       total_size += 1 +
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(

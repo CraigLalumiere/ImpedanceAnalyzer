@@ -61,13 +61,15 @@ enum MessageType : int {
   CLI_DATA = 2,
   LOG_TO_PLOT = 3,
   ADD_XY_TO_PLOT = 4,
-  DRAW_PLOT = 5,
-  DRAW_BODE_PLOT = 6,
-  CLEAR_PLOTS = 7
+  ADD_TO_BODE_PLOT = 5,
+  DRAW_PLOT = 6,
+  DRAW_BODE_PLOT = 7,
+  CLEAR_PLOTS = 8,
+  CONFIG_PLOT = 9
 };
 bool MessageType_IsValid(int value);
 constexpr MessageType MessageType_MIN = LOG_PRINT;
-constexpr MessageType MessageType_MAX = CLEAR_PLOTS;
+constexpr MessageType MessageType_MAX = CONFIG_PLOT;
 constexpr int MessageType_ARRAYSIZE = MessageType_MAX + 1;
 
 const ::PROTOBUF_NAMESPACE_ID::EnumDescriptor* MessageType_descriptor();

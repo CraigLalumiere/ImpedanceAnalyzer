@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto2',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x11MessageType.proto*\x83\x01\n\x0bMessageType\x12\r\n\tLOG_PRINT\x10\x01\x12\x0c\n\x08\x43LI_DATA\x10\x02\x12\x0f\n\x0bLOG_TO_PLOT\x10\x03\x12\x12\n\x0e\x41\x44\x44_XY_TO_PLOT\x10\x04\x12\r\n\tDRAW_PLOT\x10\x05\x12\x12\n\x0e\x44RAW_BODE_PLOT\x10\x06\x12\x0f\n\x0b\x43LEAR_PLOTS\x10\x07'
+  serialized_pb=b'\n\x11MessageType.proto*\xaa\x01\n\x0bMessageType\x12\r\n\tLOG_PRINT\x10\x01\x12\x0c\n\x08\x43LI_DATA\x10\x02\x12\x0f\n\x0bLOG_TO_PLOT\x10\x03\x12\x12\n\x0e\x41\x44\x44_XY_TO_PLOT\x10\x04\x12\x14\n\x10\x41\x44\x44_TO_BODE_PLOT\x10\x05\x12\r\n\tDRAW_PLOT\x10\x06\x12\x12\n\x0e\x44RAW_BODE_PLOT\x10\x07\x12\x0f\n\x0b\x43LEAR_PLOTS\x10\x08\x12\x0f\n\x0b\x43ONFIG_PLOT\x10\t'
 )
 
 _MESSAGETYPE = _descriptor.EnumDescriptor(
@@ -51,17 +51,27 @@ _MESSAGETYPE = _descriptor.EnumDescriptor(
       type=None,
       create_key=_descriptor._internal_create_key),
     _descriptor.EnumValueDescriptor(
-      name='DRAW_PLOT', index=4, number=5,
+      name='ADD_TO_BODE_PLOT', index=4, number=5,
       serialized_options=None,
       type=None,
       create_key=_descriptor._internal_create_key),
     _descriptor.EnumValueDescriptor(
-      name='DRAW_BODE_PLOT', index=5, number=6,
+      name='DRAW_PLOT', index=5, number=6,
       serialized_options=None,
       type=None,
       create_key=_descriptor._internal_create_key),
     _descriptor.EnumValueDescriptor(
-      name='CLEAR_PLOTS', index=6, number=7,
+      name='DRAW_BODE_PLOT', index=6, number=7,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
+    _descriptor.EnumValueDescriptor(
+      name='CLEAR_PLOTS', index=7, number=8,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
+    _descriptor.EnumValueDescriptor(
+      name='CONFIG_PLOT', index=8, number=9,
       serialized_options=None,
       type=None,
       create_key=_descriptor._internal_create_key),
@@ -69,7 +79,7 @@ _MESSAGETYPE = _descriptor.EnumDescriptor(
   containing_type=None,
   serialized_options=None,
   serialized_start=22,
-  serialized_end=153,
+  serialized_end=192,
 )
 _sym_db.RegisterEnumDescriptor(_MESSAGETYPE)
 
@@ -78,9 +88,11 @@ LOG_PRINT = 1
 CLI_DATA = 2
 LOG_TO_PLOT = 3
 ADD_XY_TO_PLOT = 4
-DRAW_PLOT = 5
-DRAW_BODE_PLOT = 6
-CLEAR_PLOTS = 7
+ADD_TO_BODE_PLOT = 5
+DRAW_PLOT = 6
+DRAW_BODE_PLOT = 7
+CLEAR_PLOTS = 8
+CONFIG_PLOT = 9
 
 
 DESCRIPTOR.enum_types_by_name['MessageType'] = _MESSAGETYPE

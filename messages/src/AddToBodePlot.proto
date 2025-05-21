@@ -1,0 +1,9 @@
+syntax = "proto2";
+
+message AddToBodePlot {
+  required uint32 plot_number = 1;
+  required string data_label = 2;
+  required float data_freq = 3;
+  required float data_mag = 4;
+  required float data_phase = 5;
+}

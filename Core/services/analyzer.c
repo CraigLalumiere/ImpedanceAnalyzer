@@ -45,6 +45,7 @@ enum AnalyzerSignals
 {
     SET_FREQ_RANGE_SIG = PRIVATE_SIGNAL_ANALYZER_START,
     BEGIN_FREQ_SWEEP_SIG,
+    SINUSOID_COMPLETE_SIG,
     OFFSET_CALIBRATION_SIG,
     GAIN_CALIBRATION_SIG,
     SUBSTATE_FREQ_SWEEP_COMPLETE_SIG,
@@ -53,10 +54,9 @@ enum AnalyzerSignals
 
 typedef struct
 {
-    float32_t magnitude;
-    float32_t phase;
-    float32_t total_harmonic_distortion;
-} MagPhase_T;
+    float real;
+    float imag;
+} Complex_T;
 
 typedef struct
 {
@@ -71,11 +71,12 @@ typedef struct
     uint32_t freq_end;
     float32_t freq_spacing; // logarithmic spacing between frequencies
     uint16_t num_freq_points;
+    uint16_t this_interval_index;
 
     Source_Impedance_T source_impedance;
 
-    float32_t freq_list[FREQ_POINTS_MAX];
-    uint16_t freq_index;
+    volatile uint8_t adc_callback_counter;
+    bool running_sinusoid;
 
     uint16_t dac_dma_buffer[DAC_DMA_BUFFER_MAX_SIZE];
     int16_t sine_buffer[ADC_DMA_BUFFER_MAX_SIZE];
@@ -85,13 +86,8 @@ typedef struct
     uint16_t dac_dma_data_len;
     uint16_t adc_dma_data_len;
 
-    uint16_t sweep_number; // for labeling data on the python plot
-
-    MagPhase_T voltage_measurements[FREQ_POINTS_MAX];
-    MagPhase_T current_measurements[FREQ_POINTS_MAX];
-
-    MagPhase_T current_offset_cal[FREQ_POINTS_MAX];
-    MagPhase_T gain_offset_cal[FREQ_POINTS_MAX];
+    Complex_T current_offset_cal[FREQ_POINTS_MAX];
+    Complex_T current_gain_cal[FREQ_POINTS_MAX];
 } Analyzer;
 
 typedef struct
@@ -103,7 +99,15 @@ typedef struct
     uint32_t num_freq_points;
 } SetFreqRangeEvent_T;
 
+/**************************************************************************************************\
+* Private memory declarations
+\**************************************************************************************************/
+
 float32_t impedances[8] = {100, 330, 1000, 3300, 10000, 33000, 100000, 330000};
+
+extern Analyzer Analyzer_inst;
+Analyzer Analyzer_inst;
+QActive *const AO_Analyzer = &Analyzer_inst.super;
 
 /**************************************************************************************************\
 * Private prototypes
@@ -113,29 +117,28 @@ static QState initial(Analyzer *const me, void const *const par);
 static QState top(Analyzer *const me, QEvt const *const e);
 static QState standby(Analyzer *const me, QEvt const *const e);
 static QState running(Analyzer *const me, QEvt const *const e);
-static QState impedance_sweep(Analyzer *const me, QEvt const *const e);
+static QState eis(Analyzer *const me, QEvt const *const e);
 static QState offset_calibration(Analyzer *const me, QEvt const *const e);
 static QState gain_calibration(Analyzer *const me, QEvt const *const e);
 
-static QState substate_impedance_sweep(Analyzer *const me, QEvt const *const e);
-
-// Substate machine
-static QState substate_do_frequency_sweep(QStateHandler super_state);
-
+static float StartNextSinusoid();
 static float32_t PeriodToFrequency(float32_t period);
-static void InitFrequenciesToSweep();
 static void GenerateSinusoid(float32_t frequency);
-static MagPhase_T ADC_FourierAnalysis(int16_t *data, uint16_t data_len);
-static void ApplyCurrentOffsetCalibration();
-static void ApplyGainOffsetCalibration();
-
-/**************************************************************************************************\
-* Private memory declarations
-\**************************************************************************************************/
-
-extern Analyzer Analyzer_inst; // the Blinky active object
-Analyzer Analyzer_inst;
-QActive *const AO_Analyzer = &Analyzer_inst.super;
+static void FourierAnalysis(
+    uint32_t *data,
+    uint16_t data_len,
+    Complex_T *V_data,
+    Complex_T *I_data,
+    float *V_THD,
+    float *I_THD);
+static float magnitude(Complex_T x);
+static float mag_squared(Complex_T x);
+static float phase(Complex_T x);
+static Complex_T add(Complex_T x, Complex_T y);
+static Complex_T subtract(Complex_T x, Complex_T y);
+static Complex_T multiply(Complex_T x, Complex_T y);
+static Complex_T divide(Complex_T x, Complex_T y);
+static void ResetCalibration();
 
 /**************************************************************************************************\
 * Public functions
@@ -148,7 +151,7 @@ void Analyzer_ctor(void)
     QTimeEvt_ctorX(&me->timeEvt, &me->super, TIMEOUT_SIG, 0U);
 
     memset(me->adc_dma_buffer, 0, ADC_DMA_BUFFER_MAX_SIZE * sizeof(me->adc_dma_buffer[0]));
-    memset(me->current_offset_cal, 0, FREQ_POINTS_MAX * sizeof(me->current_offset_cal[0]));
+    ResetCalibration();
 
     me->freq_start      = 4700;
     me->freq_end        = 400000;
@@ -159,11 +162,7 @@ void Analyzer_ctor(void)
     me->source_impedance = IMPEDANCE_10k;
     BSP_Set_Source_Impedance(me->source_impedance);
 
-    me->sweep_number = 0;
-
     // BSP_Set_DAC(OUTPUT_MID);
-
-    // InitFrequenciesToSweep();
 }
 
 void Analyzer_Set_Freq_Range(uint32_t freq_start, uint32_t freq_end, uint32_t num_freq_points)
@@ -198,6 +197,22 @@ void Analyzer_Begin_Gain_Calibration()
     Analyzer *const me      = &Analyzer_inst;
     static QEvt const event = QEVT_INITIALIZER(GAIN_CALIBRATION_SIG);
     QACTIVE_POST(&(me->super), &event, NULL);
+}
+
+void Analyzer_ADC_Callback(uint32_t dual_adc_val)
+{
+    Analyzer *const me = &Analyzer_inst;
+    // if we're generating sinusoids
+    if (me->running_sinusoid)
+    {
+        me->adc_callback_counter++;
+        // post to myself when we've completed the required number of periods
+        if (me->adc_callback_counter == NUM_ADC_SWEEPS)
+        {
+            static QEvt const event = QEVT_INITIALIZER(SINUSOID_COMPLETE_SIG);
+            QACTIVE_POST(&me->super, &event, me);
+        }
+    }
 }
 
 /**************************************************************************************************\
@@ -268,8 +283,6 @@ QState standby(Analyzer *const me, QEvt const *const e)
             Q_ASSERT(event->freq_start < event->freq_end);
             Q_ASSERT(event->freq_start >= FREQ_MIN);
             Q_ASSERT(event->freq_end <= FREQ_MAX);
-            Q_ASSERT(event->num_freq_points >= FREQ_POINTS_MIN);
-            Q_ASSERT(event->num_freq_points <= FREQ_POINTS_MAX);
 
             me->freq_start      = event->freq_start;
             me->freq_end        = event->freq_end;
@@ -277,14 +290,15 @@ QState standby(Analyzer *const me, QEvt const *const e)
             me->freq_spacing    = pow(
                 (float) me->freq_end / (float) me->freq_start, 1.0 / me->num_freq_points);
 
-            // InitFrequenciesToSweep();
+            // wipe the calibration
+            ResetCalibration();
 
             status = Q_HANDLED();
             break;
         }
         // case TIMEOUT_SIG:
         case BEGIN_FREQ_SWEEP_SIG: {
-            status = Q_TRAN(&impedance_sweep);
+            status = Q_TRAN(&eis);
             break;
         }
         case OFFSET_CALIBRATION_SIG: {
@@ -336,49 +350,54 @@ QState running(Analyzer *const me, QEvt const *const e)
     return status;
 }
 //............................................................................
-QState impedance_sweep(Analyzer *const me, QEvt const *const e)
+QState eis(Analyzer *const me, QEvt const *const e)
 {
     QState status;
+    static float thisFreq;
     switch (e->sig)
     {
-        case Q_INIT_SIG: {
-            status = substate_do_frequency_sweep((QStateHandler) &impedance_sweep);
+        case Q_ENTRY_SIG: {
+            me->running_sinusoid = true;
+
+            PC_COM_clear_plots(); // wipe all plots in Python
+            PC_COM_config_plot(0, "Impedance magnitude", "Frequency", "Hz", "Magnitude", "Ohm");
+            PC_COM_config_plot(1, "Impedance phase", "Frequency", "Hz", "Phase", "°");
+            PC_COM_config_plot(2, "Total harmonic distortion", "Frequency", "Hz", "THD", "");
+
+            me->this_interval_index = 0;
+
+            thisFreq = StartNextSinusoid();
+
+            status = Q_HANDLED();
             break;
         }
-        case SUBSTATE_FREQ_SWEEP_COMPLETE_SIG: {
-            // ApplyCurrentOffsetCalibration();
-            // ApplyGainOffsetCalibration();
+        case SINUSOID_COMPLETE_SIG: {
+            Complex_T V_data;
+            Complex_T I_data;
+            float V_THD;
+            float I_THD;
+            FourierAnalysis(
+                me->adc_dma_buffer, me->adc_dma_data_len, &V_data, &I_data, &V_THD, &I_THD);
 
-            MagPhase_T dut_impedance[FREQ_POINTS_MAX];
+            Complex_T current_offset = me->current_offset_cal[me->this_interval_index];
+            Complex_T current_gain   = me->current_gain_cal[me->this_interval_index];
 
-            for (int i = 0; i < me->num_freq_points; i++)
+            I_data = multiply(subtract(I_data, current_offset), current_gain);
+
+            Complex_T Z = divide(V_data, I_data);
+
+            PC_COM_add_datapoint_to_bode_plot(0, "Z", thisFreq, magnitude(Z), phase(Z));
+            PC_COM_add_datapoint_to_plot(2, "V THD", thisFreq, V_THD);
+            PC_COM_add_datapoint_to_plot(2, "I THD", thisFreq, I_THD);
+
+            me->this_interval_index++;
+            if (me->this_interval_index == me->num_freq_points)
+                status = Q_TRAN(&standby);
+            else
             {
-                dut_impedance[i].magnitude = me->voltage_measurements[i].magnitude /
-                    me->current_measurements[i].magnitude;
-                dut_impedance[i].phase = me->voltage_measurements[i].phase -
-                    me->current_measurements[i].phase;
-                if (dut_impedance[i].phase > 180)
-                    dut_impedance[i].phase -= 360;
-                if (dut_impedance[i].phase < -180)
-                    dut_impedance[i].phase += 360;
+                thisFreq = StartNextSinusoid();
+                status   = Q_HANDLED();
             }
-
-            // static float32_t dataV[512];
-            // static float32_t dataI[512];
-            static float32_t dataZmag[FREQ_POINTS_MAX];
-            static float32_t dataZphase[FREQ_POINTS_MAX];
-            static uint32_t dataX[FREQ_POINTS_MAX];
-            for (int i = 0; i < me->num_freq_points; i++)
-            {
-                dataZmag[i]   = (float32_t) dut_impedance[i].magnitude;
-                dataZphase[i] = (float32_t) dut_impedance[i].phase;
-                dataX[i]      = me->freq_list[i];
-            }
-            PC_COM_draw_bode_plot(0, "Z", dataX, dataZmag, dataZphase, me->num_freq_points);
-
-            PC_COM_print("Impedance sweep complete");
-
-            status = Q_TRAN(&standby);
             break;
         }
         default: {
@@ -392,25 +411,56 @@ QState impedance_sweep(Analyzer *const me, QEvt const *const e)
 QState offset_calibration(Analyzer *const me, QEvt const *const e)
 {
     QState status;
+    static float thisFreq;
     switch (e->sig)
     {
-        case Q_INIT_SIG: {
-            status = substate_do_frequency_sweep((QStateHandler) &offset_calibration);
+        case Q_ENTRY_SIG: {
+            PC_COM_print("Beginning offset calibration");
+            me->running_sinusoid    = true;
+            me->this_interval_index = 0;
+
+            thisFreq = StartNextSinusoid();
+
+            status = Q_HANDLED();
             break;
         }
-        case SUBSTATE_FREQ_SWEEP_COMPLETE_SIG: {
-            for (int i = 0; i < me->num_freq_points; i++)
+        case Q_EXIT_SIG: {
+            PC_COM_print("Finished offset calibration");
+            status = Q_HANDLED();
+            break;
+        }
+        case SINUSOID_COMPLETE_SIG: {
+            Complex_T V_data;
+            Complex_T I_data;
+            float V_THD;
+            float I_THD;
+            FourierAnalysis(
+                me->adc_dma_buffer, me->adc_dma_data_len, &V_data, &I_data, &V_THD, &I_THD);
+
+            me->current_offset_cal[me->this_interval_index] = I_data;
+
+            me->this_interval_index++;
+            if (me->this_interval_index == me->num_freq_points)
+                status = Q_TRAN(&standby);
+            else
             {
-                me->current_offset_cal[i].magnitude = -me->current_measurements[i].magnitude;
-                me->current_offset_cal[i].phase     = -me->current_measurements[i].phase;
+                thisFreq = StartNextSinusoid();
+                status   = Q_HANDLED();
             }
-
-            PC_COM_print("Offset calibration complete");
-
-            status = Q_TRAN(&standby);
             break;
         }
-
+        case TIMEOUT_SIG: {
+            char print_buffer[PC_COM_EVENT_MAX_MSG_LENGTH] = {0};
+            snprintf(
+                print_buffer,
+                sizeof(print_buffer),
+                "Working... %d/%d",
+                me->this_interval_index,
+                me->num_freq_points);
+            PC_COM_print(print_buffer);
+            status = Q_HANDLED();
+            break;
+        }
         default: {
             status = Q_SUPER(&running);
             break;
@@ -422,151 +472,49 @@ QState offset_calibration(Analyzer *const me, QEvt const *const e)
 QState gain_calibration(Analyzer *const me, QEvt const *const e)
 {
     QState status;
-    switch (e->sig)
-    {
-        case Q_INIT_SIG: {
-            status = substate_do_frequency_sweep((QStateHandler) &gain_calibration);
-            break;
-        }
-        case SUBSTATE_FREQ_SWEEP_COMPLETE_SIG: {
-            ApplyCurrentOffsetCalibration();
-
-            for (int i = 0; i < me->num_freq_points; i++)
-            {
-                MagPhase_T thisImpedance;
-                thisImpedance.magnitude = me->voltage_measurements[i].magnitude /
-                    me->current_measurements[i].magnitude;
-                thisImpedance.phase = me->voltage_measurements[i].phase -
-                    me->current_measurements[i].phase;
-                me->gain_offset_cal[i].magnitude = 10000.0 / thisImpedance.magnitude;
-                me->gain_offset_cal[i].phase     = -thisImpedance.phase;
-            }
-
-            PC_COM_print("Gain calibration complete");
-
-            status = Q_TRAN(&standby);
-            break;
-        }
-
-        default: {
-            status = Q_SUPER(&running);
-            break;
-        }
-    }
-    return status;
-}
-//............................................................................
-QState substate_impedance_sweep(Analyzer *const me, QEvt const *const e)
-{
-    QState status;
+    static float thisFreq;
     switch (e->sig)
     {
         case Q_ENTRY_SIG: {
-            // char print_buffer[PC_COM_EVENT_MAX_MSG_LENGTH] = {0};
-            // snprintf(print_buffer, sizeof(print_buffer), "%d Hz", me->freq_list[me->freq_index]);
-            // PC_COM_print(print_buffer);
+            PC_COM_print("Beginning gain calibration");
+            me->running_sinusoid    = true;
+            me->this_interval_index = 0;
 
-            BSP_Set_Source_Impedance(me->source_impedance);
-            BSP_Stop_ADC_DAC_DMA();
-            GenerateSinusoid(me->freq_list[me->freq_index]);
-            // uint16_t dac_total_clock_periods = max(
-            //     2 * me->adc_dma_data_len * ADC_DOWNSAMPLING_RATE,
-            //     NUM_PERIODS * me->dac_dma_data_len);
-            uint16_t dac_total_clock_periods = NUM_ADC_SWEEPS * me->adc_dma_data_len *
-                ADC_DOWNSAMPLING_RATE;
-            dac_total_clock_periods++;
-
-            BSP_Setup_ADC_DAC_DMA(
-                me->adc_dma_buffer,
-                me->adc_dma_data_len,
-                me->dac_dma_buffer,
-                me->dac_dma_data_len,
-                dac_total_clock_periods);
-            BSP_Start_Waveform_Timer();
+            thisFreq = StartNextSinusoid();
 
             status = Q_HANDLED();
             break;
         }
-        case POSTED_WAVEFORM_CAPTURE_COMPLETE_SIG: {
-            // Voltage across source impedance is ADC2-ADC1
+        case Q_EXIT_SIG: {
+            PC_COM_print("Finished gain calibration");
+            status = Q_HANDLED();
+            break;
+        }
+        case SINUSOID_COMPLETE_SIG: {
+            Complex_T V_data;
+            Complex_T I_data;
+            float V_THD;
+            float I_THD;
+            FourierAnalysis(
+                me->adc_dma_buffer, me->adc_dma_data_len, &V_data, &I_data, &V_THD, &I_THD);
 
-            int16_t load_voltage_waveform[ADC_DMA_BUFFER_MAX_SIZE];
-            int16_t voltage_across_resistor_waveform[ADC_DMA_BUFFER_MAX_SIZE];
-            for (int i = 0; i < me->adc_dma_data_len; i++)
-            {
-                int16_t v1 = me->adc_dma_buffer[i] & 0xFFF; // voltage at load
-                int16_t v2 = me->adc_dma_buffer[i] >> 16;   // voltage at output of op amp
+            Complex_T current_offset = me->current_offset_cal[me->this_interval_index];
 
-                load_voltage_waveform[i]            = v1;
-                voltage_across_resistor_waveform[i] = v2 - v1;
-            }
-            MagPhase_T resistor_voltage = ADC_FourierAnalysis(
-                voltage_across_resistor_waveform, me->adc_dma_data_len);
+            I_data = subtract(I_data, current_offset);
 
-            MagPhase_T load_voltage = ADC_FourierAnalysis(
-                load_voltage_waveform, me->adc_dma_data_len);
+            Complex_T Z     = divide(V_data, I_data);
+            Complex_T Z_cal = {10000.0, 0};
 
-            // // if the source resistor voltage is too small, impedance should be increased
-            // if (resistor_voltage.magnitude < MINIMUM_VOLTAGE_ACROSS_LOAD_RESISTOR &&
-            //     me->source_impedance < IMPEDANCE_MAX)
-            // {
-            //     me->source_impedance++;
-            //     status = Q_TRAN(&begin_sinusoid);
-            // }
-            // // if the source resistor voltage is too great, impedance should be decreased
-            // else if (
-            //     resistor_voltage.magnitude > MAXIMUM_VOLTAGE_ACROSS_LOAD_RESISTOR &&
-            //     me->source_impedance > IMPEDANCE_MIN)
-            // {
-            //     me->source_impedance--;
-            //     status = Q_TRAN(&begin_sinusoid);
-            // }
-            // else
-            // {
-            MagPhase_T current;
-            current.magnitude = resistor_voltage.magnitude / impedances[me->source_impedance];
-            current.phase     = resistor_voltage.phase;
+            me->current_gain_cal[me->this_interval_index] = divide(Z, Z_cal);
 
-            me->voltage_measurements[me->freq_index] = load_voltage;
-            me->current_measurements[me->freq_index] = current;
-
-            // char mag_label[16] = {0};
-            // snprintf(mag_label, sizeof(mag_label), "mag %d", me->sweep_number);
-            // log_XY(1, mag_label, me->freq_list[me->freq_index], dut_impedance.magnitude);
-            // char phase_label[16] = {0};
-            // snprintf(phase_label, sizeof(phase_label), "phase %d", me->sweep_number);
-            // log_XY(2, phase_label, me->freq_list[me->freq_index], dut_impedance.phase);
-
-            // plot the raw data
-            // static float32_t applied_data_float[512];
-            // static float32_t delta_data_float[512];
-            // for (int i = 0; i < me->adc_dma_data_len; i++)
-            // {
-            //     // adc1_data_float[i] = (float32_t) (me->adc_dma_buffer[i] & 0xFFF);
-            //     // adc2_data_float[i] = (float32_t) (me->adc_dma_buffer[i] >> 16);
-            //     applied_data_float[i] = (float32_t) (applied_voltage_waveform[i]);
-            //     delta_data_float[i]   = (float32_t) (voltage_across_resistor_waveform[i]);
-            // }
-
-            // log_data_block(0, "delta", delta_data_float, me->adc_dma_data_len);
-            // log_data_block(0, "applied", applied_data_float, me->adc_dma_data_len);
-
-            if (me->freq_list[me->freq_index] >= me->freq_end ||
-                me->freq_index + 1 == FREQ_POINTS_MAX)
-            {
-                me->num_freq_points     = me->freq_index + 1;
-                static QEvt const event = QEVT_INITIALIZER(SUBSTATE_FREQ_SWEEP_COMPLETE_SIG);
-                QACTIVE_POST(&(me->super), &event, NULL);
-                status = Q_HANDLED();
-            }
+            me->this_interval_index++;
+            if (me->this_interval_index == me->num_freq_points)
+                status = Q_TRAN(&standby);
             else
             {
-                me->freq_index++;
-                me->freq_list[me->freq_index] = me->freq_list[me->freq_index - 1] *
-                    me->freq_spacing;
-                status = Q_TRAN(&substate_impedance_sweep);
+                thisFreq = StartNextSinusoid();
+                status   = Q_HANDLED();
             }
-            // }
             break;
         }
         case TIMEOUT_SIG: {
@@ -575,14 +523,14 @@ QState substate_impedance_sweep(Analyzer *const me, QEvt const *const e)
                 print_buffer,
                 sizeof(print_buffer),
                 "Working... %d/%d",
-                me->freq_index,
+                me->this_interval_index,
                 me->num_freq_points);
             PC_COM_print(print_buffer);
             status = Q_HANDLED();
             break;
         }
         default: {
-            status = Q_SUPER(me->substate_super_state);
+            status = Q_SUPER(&running);
             break;
         }
     }
@@ -592,17 +540,46 @@ QState substate_impedance_sweep(Analyzer *const me, QEvt const *const e)
 /**
  ***************************************************************************************************
  *
- * @brief   Substate machine
+ * @brief   Helper function to calculate next sinusoid frequency and setup the peripherals
  *
  **************************************************************************************************/
 
-static QState substate_do_frequency_sweep(QStateHandler super_state)
+static float StartNextSinusoid()
 {
-    Analyzer *const me       = &Analyzer_inst;
-    me->freq_index           = 0; // start at the beginning of the sweep
-    me->freq_list[0]         = me->freq_start;
-    me->substate_super_state = super_state;
-    return Q_TRAN(&substate_impedance_sweep);
+    Analyzer *const me = &Analyzer_inst;
+    BSP_Stop_ADC_DAC_DMA();
+
+    float thisFreq;
+
+    if (me->num_freq_points == 1)
+        thisFreq = me->freq_start;
+    else
+    {
+        float exponent = (float) me->this_interval_index / (float) (me->num_freq_points - 1);
+        thisFreq       = me->freq_start * pow(me->freq_end / me->freq_start, exponent);
+    }
+
+    // generate the sinusoids in the DAC buffer and update the timer rate if
+    // needed
+    GenerateSinusoid(thisFreq);
+
+    // calculate number of clock pulses to feed to the DAC
+    // (ADC will receive 1/ADC_DOWNSAMPLING_RATE times as many)
+    uint32_t dac_total_clock_periods = NUM_ADC_SWEEPS * me->adc_dma_data_len *
+        ADC_DOWNSAMPLING_RATE;
+    dac_total_clock_periods++;
+
+    BSP_Setup_ADC_DAC_DMA(
+        me->adc_dma_buffer,
+        me->adc_dma_data_len,
+        me->dac_dma_buffer,
+        me->dac_dma_data_len,
+        dac_total_clock_periods);
+
+    me->adc_callback_counter = 0;
+
+    BSP_Start_Waveform_Timer();
+    return thisFreq;
 }
 
 /**
@@ -615,43 +592,6 @@ static QState substate_do_frequency_sweep(QStateHandler super_state)
 static float32_t PeriodToFrequency(float32_t period)
 {
     return 12000000.0 / period / ADC_DOWNSAMPLING_RATE;
-}
-
-/**
- ***************************************************************************************************
- *
- * @brief   Populate array freq_list with logarithmically spaced frequencies between the min and
- *max
- *
- **************************************************************************************************/
-static void InitFrequenciesToSweep()
-{
-    Analyzer *const me     = &Analyzer_inst;
-    double freq_separation = pow(me->freq_end / me->freq_start, 1.0 / me->num_freq_points);
-    // uint32_t lastPer       = 0xFFFFFF;
-    // distribute frequency points logarithmically
-    int i;
-    for (i = 0; i < me->num_freq_points; i++)
-    {
-        me->freq_list[i] = (float32_t) (me->freq_start) * pow(freq_separation, i);
-        Q_ASSERT(me->freq_list[i] >= FREQ_MIN);
-        Q_ASSERT(me->freq_list[i] <= FREQ_MAX);
-        // uint32_t thisPer = PeriodToFrequency(thisFreq);
-        // if (thisPer == lastPer)
-        //     break;
-        // me->freq_list[i] = PeriodToFrequency(thisPer);
-
-        // lastPer = thisPer;
-    }
-
-    // do
-    // {
-    //     me->freq_list[i++] = PeriodToFrequency(--lastPer);
-    // } while (PeriodToFrequency(lastPer) < me->freq_end);
-
-    // me->num_freq_points = i;
-
-    me->freq_index = 0; // start at the beginning
 }
 
 /**
@@ -700,69 +640,129 @@ static void GenerateSinusoid(float32_t frequency)
 /**
  ***************************************************************************************************
  *
- * @brief   Find the amplitude and phase at a specific frequency in a sample of data
+ * @brief   Find the amplitude and phase at a specific frequency from the ADC DMA buffer
+ * Equivalent to evaluating the Fourier transform at a single frequency
  *
  **************************************************************************************************/
 
-static MagPhase_T ADC_FourierAnalysis(int16_t *data, uint16_t data_len)
+static void FourierAnalysis(
+    uint32_t *data,
+    uint16_t data_len,
+    Complex_T *V_data,
+    Complex_T *I_data,
+    float *V_THD,
+    float *I_THD)
 {
     Analyzer *const me = &Analyzer_inst;
 
-    MagPhase_T result;
-
-    int32_t mean = 0;
+    uint32_t V_sum = 0;
+    int32_t I_sum  = 0;
     for (int i = 0; i < data_len; i++)
     {
-        mean += data[i];
+        int16_t v1 = me->adc_dma_buffer[i] & 0xFFF; // voltage at load
+        int16_t v2 = me->adc_dma_buffer[i] >> 16;   // voltage at output of op amp
+        V_sum += v1;
+        I_sum += v2 - v1;
     }
-    mean /= data_len;
-    int32_t inPhase_sum      = 0;
-    int32_t quadrature_sum   = 0;
-    uint32_t mean_square_sum = 0; // the square of RMS
+    float V_mean = (float) V_sum / data_len;
+    float I_mean = (float) I_sum / data_len;
+
+    int32_t V_inPhase_sum      = 0;
+    int32_t V_quadrature_sum   = 0;
+    uint32_t V_mean_square_sum = 0; // the square of RMS
+    int32_t I_inPhase_sum      = 0;
+    int32_t I_quadrature_sum   = 0;
+    uint32_t I_mean_square_sum = 0; // the square of RMS
     for (int i = 0; i < data_len; i++)
     {
-        inPhase_sum += data[i] * me->sine_buffer[i];
-        quadrature_sum += data[i] * me->cosine_buffer[i];
-        mean_square_sum += (data[i] - mean) * (data[i] - mean);
+        int16_t v1     = me->adc_dma_buffer[i] & 0xFFF; // voltage at load
+        int16_t v2     = me->adc_dma_buffer[i] >> 16;   // voltage at output of op amp
+        int16_t this_V = v1;
+        int16_t this_I = v2 - v1;
+        V_inPhase_sum += this_V * me->sine_buffer[i];
+        V_quadrature_sum += this_V * me->cosine_buffer[i];
+        V_mean_square_sum += (this_V - V_mean) * (this_V - V_mean);
+        I_inPhase_sum += this_I * me->sine_buffer[i];
+        I_quadrature_sum += this_I * me->cosine_buffer[i];
+        I_mean_square_sum += (this_I - I_mean) * (this_I - I_mean);
     }
-    float32_t inPhase                = (float32_t) inPhase_sum / SINUSOID_AMP / data_len * 2;
-    float32_t quadrature             = (float32_t) quadrature_sum / SINUSOID_AMP / data_len * 2;
-    float32_t mean_square            = (float32_t) mean_square_sum / data_len * 2;
-    result.magnitude                 = sqrt(inPhase * inPhase + quadrature * quadrature);
-    result.phase                     = atan2(quadrature, inPhase) * 180.0 / pi;
-    result.total_harmonic_distortion = sqrt(mean_square - result.magnitude * result.magnitude) /
-        result.magnitude;
+    V_data->real        = (float) V_inPhase_sum / SINUSOID_AMP / data_len * 2;
+    V_data->imag        = (float) V_quadrature_sum / SINUSOID_AMP / data_len * 2;
+    float V_mean_square = (float) V_mean_square_sum / data_len * 2;
 
-    return result;
+    // at this point, I_data is the voltage across the source resistor
+    I_data->real        = (float) I_inPhase_sum / SINUSOID_AMP / data_len * 2;
+    I_data->imag        = (float) I_quadrature_sum / SINUSOID_AMP / data_len * 2;
+    float I_mean_square = (float) I_mean_square_sum / data_len * 2;
 
-    // if (calibrating)
-    // {
-    //     amp_cal_list[curr_freq_index]   = 1024.0 / amplitude;
-    //     phase_cal_list[curr_freq_index] = -angle;
-    // }
-    // else if (calibrated)
-    // {
-    //     amplitude *= amp_cal_list[curr_freq_index];
-    //     angle += phase_cal_list[curr_freq_index];
-    // }
+    *V_THD = sqrt(V_mean_square - mag_squared(*V_data)) / magnitude(*V_data);
+    *I_THD = sqrt(I_mean_square - mag_squared(*I_data)) / magnitude(*I_data);
+
+    // convert voltage across resistor to current
+    I_data->real /= impedances[me->source_impedance];
+    I_data->imag /= impedances[me->source_impedance];
 }
 
-static void ApplyCurrentOffsetCalibration()
+static float magnitude(Complex_T x)
 {
-    Analyzer *const me = &Analyzer_inst;
-    for (int i = 0; i < me->num_freq_points; i++)
-    {
-        me->current_measurements[i].magnitude += me->current_offset_cal[i].magnitude;
-        me->current_measurements[i].phase += me->current_offset_cal[i].phase;
-    }
+    return sqrt(mag_squared(x));
 }
 
-static void ApplyGainOffsetCalibration()
+static float mag_squared(Complex_T x)
+{
+    return pow(x.real, 2) + pow(x.imag, 2);
+}
+
+static float phase(Complex_T x)
+{
+    float phase = atan2(x.imag, x.real) * 180.0 / M_PI;
+    if (phase > 180)
+        phase -= 360;
+    if (phase < -180)
+        phase += 360;
+    return phase;
+}
+
+static Complex_T add(Complex_T x, Complex_T y)
+{
+    Complex_T sum;
+    sum.real = x.real + y.real;
+    sum.imag = x.imag + y.imag;
+    return sum;
+}
+
+static Complex_T subtract(Complex_T x, Complex_T y)
+{
+    Complex_T diff;
+    diff.real = x.real - y.real;
+    diff.imag = x.imag - y.imag;
+    return diff;
+}
+
+static Complex_T multiply(Complex_T x, Complex_T y)
+{
+    Complex_T product;
+    product.real = x.real * y.real - x.imag * y.imag;
+    product.imag = x.real * y.imag + x.imag * y.real;
+    return product;
+}
+
+static Complex_T divide(Complex_T x, Complex_T y)
+{
+    Complex_T quotient;
+    float temp    = pow(y.real, 2) + pow(y.imag, 2);
+    quotient.real = (x.real * y.real + x.imag * y.imag) / temp;
+    quotient.imag = (x.imag * y.real - x.real * y.imag) / temp;
+    return quotient;
+}
+
+static void ResetCalibration()
 {
     Analyzer *const me = &Analyzer_inst;
-    for (int i = 0; i < me->num_freq_points; i++)
+    memset(me->current_offset_cal, 0, FREQ_POINTS_MAX * sizeof(me->current_offset_cal[0]));
+    for (int i = 0; i < FREQ_POINTS_MAX; i++)
     {
-        me->current_measurements[i].magnitude /= me->gain_offset_cal[i].magnitude;
-        me->current_measurements[i].phase -= me->gain_offset_cal[i].phase;
+        me->current_gain_cal[i].real = 1;
+        me->current_gain_cal[i].imag = 0;
     }
 }
